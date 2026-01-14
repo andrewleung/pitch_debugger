@@ -1,0 +1,986 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Flow 4 Demo — Material Change Publisher (Change Control + Safe Disclosure)</title>
+  <style>
+    :root{
+      --bg:#0b1020; --panel:#0f1733; --panel2:#0c1430; --border:#243058;
+      --text:#e8ecff; --muted:#a9b4e6; --good:#38d39f; --warn:#ffd166; --bad:#ff6b6b; --accent:#7aa2ff;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:var(--sans); color:var(--text);
+      background:linear-gradient(180deg,#070b17 0%, #0b1020 45%, #060916 100%);
+    }
+    header{
+      padding:16px 20px; border-bottom:1px solid var(--border);
+      background:rgba(15,23,51,0.65); backdrop-filter: blur(8px);
+      position:sticky; top:0; z-index:5;
+      display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+    }
+    header h1{ margin:0; font-size:16px; letter-spacing:0.2px;}
+    header .sub{ color:var(--muted); font-size:12px; max-width:980px;}
+    .wrap{ padding:16px 20px 24px; max-width:1460px; margin:0 auto;}
+    .grid{ display:grid; grid-template-columns: 1.1fr 0.9fr; gap:14px; }
+    @media (max-width: 980px){ .grid{ grid-template-columns: 1fr; } }
+    .card{
+      border:1px solid var(--border); border-radius:14px; background:rgba(15,23,51,0.55);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.25); overflow:hidden;
+    }
+    .card .hd{
+      padding:12px 14px; border-bottom:1px solid var(--border);
+      display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+      background:linear-gradient(180deg, rgba(122,162,255,0.08), rgba(15,23,51,0.0));
+    }
+    .card .hd .title{ font-weight:900; font-size:13px; }
+    .card .hd .hint{ color:var(--muted); font-size:12px; }
+    .card .bd{ padding:12px 14px; }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    button{
+      border:1px solid var(--border); background:#101a3a; color:var(--text);
+      padding:9px 10px; border-radius:10px; cursor:pointer; font-weight:750; font-size:12px;
+    }
+    button:hover{ border-color:#32407a; background:#0f1a3f; }
+    button.primary{ border-color: rgba(122,162,255,0.7); box-shadow:0 0 0 2px rgba(122,162,255,0.12) inset; }
+    button.danger{ border-color: rgba(255,107,107,0.75); }
+    button:disabled{ opacity:0.55; cursor:not-allowed; }
+    textarea, input, select{
+      width:100%; border-radius:12px; border:1px solid var(--border);
+      background:rgba(12,20,48,0.75); color:var(--text);
+      padding:10px 10px; font-size:12px; outline:none;
+    }
+    textarea{ min-height:92px; resize:vertical; font-family:var(--mono); line-height:1.35; }
+    .pill{
+      display:inline-flex; align-items:center; gap:6px;
+      padding:4px 8px; border-radius:999px;
+      border:1px solid var(--border); background:rgba(12,20,48,0.8);
+      font-size:11px; color:var(--muted);
+    }
+    .pill b{ color:var(--text); font-weight:950; }
+    .pill.good{ border-color: rgba(56,211,159,0.5); }
+    .pill.warn{ border-color: rgba(255,209,102,0.6); }
+    .pill.bad{ border-color: rgba(255,107,107,0.55); }
+    .mono{ font-family:var(--mono); }
+    .muted{ color:var(--muted); }
+    .tiny{ font-size:11px; color:var(--muted); }
+    .section{
+      border:1px solid rgba(36,48,88,0.75); background:rgba(12,20,48,0.45);
+      border-radius:12px; padding:10px; margin:10px 0;
+    }
+    .section h3{ margin:0 0 6px; font-size:12px; display:flex; align-items:center; justify-content:space-between; gap:10px;}
+    .list{ margin:6px 0 0; padding-left:16px; }
+    .list li{ margin:4px 0; font-size:12px; }
+    .kv{ display:grid; grid-template-columns: 170px 1fr; gap:8px; margin:4px 0; }
+    .kv .k{ color:var(--muted); font-size:11px; }
+    .kv .v{ font-size:12px; }
+    .hr{ height:1px; background:var(--border); margin:12px 0; opacity:0.85; }
+    .rightcol{ display:grid; grid-template-rows:auto auto 1fr; gap:14px;}
+    .chip{
+      padding:6px 8px; border-radius:10px; background:rgba(12,20,48,0.7); border:1px solid var(--border);
+      font-family:var(--mono); font-size:11px; color:var(--text); display:inline-flex; align-items:center; gap:8px;
+    }
+    .item{
+      border:1px solid var(--border); background:rgba(12,20,48,0.55);
+      border-radius:12px; padding:10px; margin:8px 0;
+    }
+    .item.good{ border-color: rgba(56,211,159,0.45); }
+    .item.warn{ border-color: rgba(255,209,102,0.55); }
+    .item.bad{ border-color: rgba(255,107,107,0.55); }
+    .badge{
+      display:inline-block; font-size:10px; padding:2px 6px; border-radius:8px; margin-left:8px;
+      border:1px dashed rgba(255,209,102,0.7); color:var(--warn);
+      vertical-align:middle;
+    }
+    .two{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+    @media (max-width: 720px){ .two{ grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Flow 4 Demo: Material Change Detected → Change Control + Safe Disclosure</h1>
+    <div class="sub">
+      This demo simulates a <b>Material Change Publisher</b> that logs changes (pivot, numbers, competitor, disclosure risk),
+      emits a <b>Delta Packet</b>, and triggers: (1) <b>Workflow OS</b> tasks/risk updates, (2) <b>Pitch Debugger</b> recompile, and (3) an optional <b>safe external publish</b> view.
+      Open DevTools → Console for trace logs.
+    </div>
+  </div>
+  <div class="row">
+    <span class="pill mono" id="versionPill"><b>v0</b> • not compiled</span>
+    <span class="pill" id="changePill">Material changes: <b id="changeCount">0</b></span>
+    <span class="pill" id="forwardPill">Forwardable: <b>unknown</b></span>
+    <button class="primary" id="btnCompile">Compile / Recompile</button>
+    <button id="btnProcessChanges">Process Changes → Delta</button>
+    <button id="btnRunRubrics">Run Rubrics</button>
+    <button class="danger" id="btnReset">Reset</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="grid">
+    <!-- LEFT: CHANGE INTAKE + CHANGE LOG + TASKS -->
+    <div class="card">
+      <div class="hd">
+        <div>
+          <div class="title">Material Change Publisher (intake → change log → delta packet)</div>
+          <div class="hint">Add a change, then process it to generate delta + tasks. Compile to apply to the Decision Pack.</div>
+        </div>
+        <div class="row">
+          <span class="pill" id="deltaPill">Delta: <b>none</b></span>
+          <span class="pill" id="taskPill">Tasks: <b id="taskCount">0</b></span>
+          <span class="pill" id="evPill">Evidence: <b id="evCount">0</b></span>
+        </div>
+      </div>
+      <div class="bd">
+        <div class="section">
+          <h3><span>Add a Material Change</span><span class="chip">Change Intake</span></h3>
+          <div class="two">
+            <div>
+              <div class="tiny">Change type</div>
+              <select id="selType"></select>
+            </div>
+            <div>
+              <div class="tiny">Severity</div>
+              <select id="selSeverity">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="two" style="margin-top:10px;">
+            <div>
+              <div class="tiny">Impacts (multi-select)</div>
+              <select id="selImpacts" multiple size="5"></select>
+              <div class="tiny muted" style="margin-top:6px;">Tip: ctrl/cmd-click to select multiple.</div>
+            </div>
+            <div>
+              <div class="tiny">Disclosure sensitivity</div>
+              <select id="selDisclosure">
+                <option value="internal_only">Internal-only (sensitive)</option>
+                <option value="redactable" selected>Redactable (safe summary possible)</option>
+                <option value="public_safe">Public-safe (already disclosed)</option>
+              </select>
+
+              <div class="tiny" style="margin-top:10px;">Short description</div>
+              <input id="inpTitle" placeholder="e.g., Competitor shipped a similar feature; we need to tighten novelty delta" />
+            </div>
+          </div>
+
+          <div class="tiny" style="margin-top:10px;">Details (internal)</div>
+          <textarea id="txtDetails" placeholder="Add context, numbers, links, internal notes..."></textarea>
+
+          <div class="row" style="margin-top:10px;">
+            <button id="btnSeedChange">Seed example change</button>
+            <button class="primary" id="btnAddChange">Add to Change Log</button>
+            <button id="btnClearForm">Clear form</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3><span>Change Log (immutable entries)</span><span class="pill" id="logPill">Log: <b>empty</b></span></h3>
+          <div id="logView" class="muted">No changes yet.</div>
+        </div>
+
+        <div class="section">
+          <h3><span>Workflow OS Tasks (from delta)</span><span class="pill" id="tasksPill">Tasks: <b>not generated</b></span></h3>
+          <div id="tasksView" class="muted">Process changes to generate tasks.</div>
+        </div>
+
+        <div class="section">
+          <h3><span>Evidence Vault</span><span class="pill mono"><b>JSON</b></span></h3>
+          <textarea id="txtEvidence" readonly></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: DECISION PACK + DELTA PACKET + SAFE EXTERNAL VIEW -->
+    <div class="rightcol">
+      <div class="card">
+        <div class="hd">
+          <div>
+            <div class="title">Decision Pack (canonical) — updated by deltas</div>
+            <div class="hint">Compile applies delta to risk register, assumptions, and evidence plan.</div>
+          </div>
+          <div class="row">
+            <span class="pill" id="gatePill">Gate: <b>—</b></span>
+            <span class="pill mono" id="scorePill">Score: <b>—</b></span>
+          </div>
+        </div>
+        <div class="bd" id="dpView">
+          <div class="muted">Compile to generate Decision Pack v0.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd">
+          <div>
+            <div class="title">Delta Packet (impact map + routing)</div>
+            <div class="hint">This is what the Material Change Publisher emits to downstream components.</div>
+          </div>
+          <div class="row">
+            <span class="pill" id="deltaStatusPill">Delta: <b>none</b></span>
+          </div>
+        </div>
+        <div class="bd" id="deltaView">
+          <div class="muted">Process changes to generate a delta packet.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd">
+          <div>
+            <div class="title">Safe External Publish View (optional)</div>
+            <div class="hint">Shows what could be shared externally without leaking sensitive details.</div>
+          </div>
+          <div class="row">
+            <span class="pill" id="pubPill">Publish: <b>not prepared</b></span>
+          </div>
+        </div>
+        <div class="bd" id="pubView">
+          <div class="muted">Process changes to generate a safe publish summary.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/**
+ * Flow 4 Demo:
+ * Material change -> Change log -> Delta packet -> Workflow OS tasks + Pitch Debugger recompile + Safe publish view
+ * Debug: open DevTools console.
+ */
+
+const log = {
+  info: (...a) => console.info("[flow4]", ...a),
+  debug: (...a) => console.debug("[flow4]", ...a),
+  warn: (...a) => console.warn("[flow4]", ...a),
+  group: (label) => console.group(label),
+  groupEnd: () => console.groupEnd(),
+};
+
+const uid = (p) => `${p}_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`;
+const nowIso = () => new Date().toISOString();
+const escapeHtml = (str) => String(str ?? "")
+  .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+  .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+
+const CHANGE_TYPES = [
+  { id:"pivot", label:"Pivot / scope change" },
+  { id:"metrics", label:"Metrics update (traction/pricing/unit econ)" },
+  { id:"competitor", label:"Competitor move / market signal" },
+  { id:"tech", label:"Technical change (architecture, model, reliability)" },
+  { id:"ip", label:"IP change (prior art found, filing decision, disclosure risk)" },
+  { id:"legal", label:"Legal/regulatory change" },
+  { id:"partner", label:"Partner status change (LOI, pilot, churn)" },
+];
+
+const IMPACTS = [
+  { id:"narrative", label:"Narrative / positioning" },
+  { id:"assumptions", label:"Assumptions / claims" },
+  { id:"risk_register", label:"Risk register" },
+  { id:"evidence_plan", label:"Evidence plan / tasks" },
+  { id:"ip_layer", label:"IP layer" },
+  { id:"financials", label:"Financials / unit economics" },
+  { id:"gtm", label:"Go-to-market" },
+];
+
+const state = {
+  version: 0,
+  compiled: false,
+
+  changeLog: [], // {id, ts, type, severity, impacts[], disclosure, title, details}
+  deltaPacket: null,
+  tasks: [],     // {id, title, severity, done, producesEvidence}
+  evidence: [],  // {id, type, title, payload, ts}
+
+  dp: null,
+  rubric: null,
+  score: null,
+  forwardable: "unknown",
+};
+
+const el = (id) => document.getElementById(id);
+const UI = {
+  versionPill: el("versionPill"),
+  changeCount: el("changeCount"),
+  changePill: el("changePill"),
+  forwardPill: el("forwardPill"),
+  scorePill: el("scorePill"),
+  gatePill: el("gatePill"),
+
+  deltaPill: el("deltaPill"),
+  deltaStatusPill: el("deltaStatusPill"),
+  taskCount: el("taskCount"),
+  evCount: el("evCount"),
+
+  selType: el("selType"),
+  selSeverity: el("selSeverity"),
+  selImpacts: el("selImpacts"),
+  selDisclosure: el("selDisclosure"),
+  inpTitle: el("inpTitle"),
+  txtDetails: el("txtDetails"),
+
+  btnSeedChange: el("btnSeedChange"),
+  btnAddChange: el("btnAddChange"),
+  btnClearForm: el("btnClearForm"),
+
+  btnCompile: el("btnCompile"),
+  btnProcessChanges: el("btnProcessChanges"),
+  btnRunRubrics: el("btnRunRubrics"),
+  btnReset: el("btnReset"),
+
+  logPill: el("logPill"),
+  logView: el("logView"),
+  tasksPill: el("tasksPill"),
+  tasksView: el("tasksView"),
+  txtEvidence: el("txtEvidence"),
+
+  dpView: el("dpView"),
+  deltaView: el("deltaView"),
+  pubPill: el("pubPill"),
+  pubView: el("pubView"),
+};
+
+function setPill(pillEl, html, tone){
+  pillEl.classList.remove("good","warn","bad");
+  if(tone) pillEl.classList.add(tone);
+  pillEl.innerHTML = html;
+}
+
+function initSelects(){
+  UI.selType.innerHTML = CHANGE_TYPES.map(t => `<option value="${t.id}">${escapeHtml(t.label)}</option>`).join("");
+  UI.selImpacts.innerHTML = IMPACTS.map(x => `<option value="${x.id}">${escapeHtml(x.label)}</option>`).join("");
+  // default impacts
+  ["risk_register","evidence_plan","narrative"].forEach(id => {
+    const opt = [...UI.selImpacts.options].find(o => o.value === id);
+    if(opt) opt.selected = true;
+  });
+}
+
+function selectedMulti(selectEl){
+  return [...selectEl.selectedOptions].map(o => o.value);
+}
+
+function severityTone(sev){
+  if(sev === "high") return "bad";
+  if(sev === "medium") return "warn";
+  return "";
+}
+
+// ---------- Material Change Publisher: compute delta packet ----------
+function redactDetails(change){
+  // simple redaction: if internal_only, replace details with placeholder
+  if(change.disclosure === "internal_only"){
+    return { safeTitle: change.title, safeDetails: "[REDACTED — internal only]" };
+  }
+  // redactable: keep summary, remove numbers-ish tokens
+  if(change.disclosure === "redactable"){
+    const safe = (change.details || "")
+      .replace(/\b\d+(\.\d+)?%?\b/g, "[#]")
+      .replace(/https?:\/\/\S+/g, "[link]");
+    return { safeTitle: change.title, safeDetails: safe.slice(0, 260) + (safe.length > 260 ? "…" : "") };
+  }
+  // public_safe: allow as-is (still truncated)
+  const d = (change.details || "");
+  return { safeTitle: change.title, safeDetails: d.slice(0, 320) + (d.length > 320 ? "…" : "") };
+}
+
+function routeImpacts(impacts){
+  // Simulate routing to components
+  const routes = [];
+  if(impacts.includes("risk_register")) routes.push("WorkflowOS.risk_update");
+  if(impacts.includes("evidence_plan")) routes.push("WorkflowOS.tasking");
+  if(impacts.includes("narrative") || impacts.includes("assumptions") || impacts.includes("financials") || impacts.includes("gtm")) routes.push("PitchDebugger.recompile");
+  if(impacts.includes("ip_layer")) routes.push("PatentIntelligence.refresh");
+  return routes;
+}
+
+function processChangesToDelta(){
+  log.group("MaterialChangePublisher.process()");
+  if(state.changeLog.length === 0){
+    log.warn("No changes to process.");
+    log.groupEnd();
+    return null;
+  }
+
+  const changes = state.changeLog.slice(); // immutable log
+  const high = changes.filter(c => c.severity === "high").length;
+  const medium = changes.filter(c => c.severity === "medium").length;
+
+  // Aggregate impact map
+  const impactCounts = {};
+  for(const c of changes){
+    for(const i of c.impacts){
+      impactCounts[i] = (impactCounts[i] || 0) + 1;
+    }
+  }
+
+  const routes = new Set();
+  for(const c of changes){
+    routeImpacts(c.impacts).forEach(r => routes.add(r));
+  }
+
+  // Build "safe publish" entries
+  const safeEntries = changes.map(c => {
+    const { safeTitle, safeDetails } = redactDetails(c);
+    return {
+      id: c.id,
+      ts: c.ts,
+      type: c.type,
+      severity: c.severity,
+      disclosure: c.disclosure,
+      safeTitle,
+      safeDetails
+    };
+  }).filter(e => e.disclosure !== "internal_only"); // don't publish internal-only at all
+
+  const delta = {
+    id: uid("DELTA"),
+    generatedAt: nowIso(),
+    changeCount: changes.length,
+    severitySummary: { high, medium, low: changes.length - high - medium },
+    impactCounts,
+    routes: [...routes],
+    changes,       // internal full detail
+    safeEntries    // external-safe subset
+  };
+
+  log.debug("delta packet", delta);
+  log.groupEnd();
+  return delta;
+}
+
+// ---------- Workflow OS: generate tasks from delta ----------
+function tasksFromDelta(delta){
+  log.group("WorkflowOS.tasksFromDelta()");
+  if(!delta){ log.warn("No delta."); log.groupEnd(); return []; }
+
+  const tasks = [];
+  const anyHigh = delta.severitySummary.high > 0;
+
+  // Base governance task
+  tasks.push({
+    id: uid("T"),
+    title: "Update Decision Pack sections impacted by delta (narrative/assumptions/risks/evidence)",
+    severity: anyHigh ? "blocker" : "normal",
+    done:false,
+    producesEvidence: { type:"trace", title:"Delta application log (mock)", payload:{ linkedTo:["Delta.apply"], deltaId: delta.id } }
+  });
+
+  // If competitor move: add adjacency + differentiation task
+  const hasCompetitor = delta.changes.some(c => c.type === "competitor");
+  if(hasCompetitor){
+    tasks.push({
+      id: uid("T"),
+      title: "Add competitor adjacency update + sharpen 'novelty delta' paragraph",
+      severity: "blocker",
+      done:false,
+      producesEvidence: { type:"receipt", title:"Competitor adjacency update (mock)", payload:{ linkedTo:["Competition", "Narrative"], deltaId: delta.id } }
+    });
+  }
+
+  // If metrics change: refresh numbers and attach a source note
+  const hasMetrics = delta.changes.some(c => c.type === "metrics");
+  if(hasMetrics){
+    tasks.push({
+      id: uid("T"),
+      title: "Refresh traction/unit economics numbers + attach metric source note",
+      severity: "normal",
+      done:false,
+      producesEvidence: { type:"receipt", title:"Metrics source note (mock)", payload:{ linkedTo:["Financials", "Assumptions"], deltaId: delta.id } }
+    });
+  }
+
+  // If IP layer impacted: trigger PI refresh placeholder
+  const hasIP = delta.changes.some(c => c.impacts.includes("ip_layer") || c.type === "ip");
+  if(hasIP){
+    tasks.push({
+      id: uid("T"),
+      title: "IP check: run prior-art refresh and record file/publish/hold decision",
+      severity: "blocker",
+      done:false,
+      producesEvidence: { type:"ip_note", title:"IP refresh decision record (mock)", payload:{ linkedTo:["IP"], deltaId: delta.id } }
+    });
+  }
+
+  // Safe disclosure task if redactable/public entries exist
+  if(delta.safeEntries.length > 0){
+    tasks.push({
+      id: uid("T"),
+      title: "Prepare safe external update (redacted) for stakeholders",
+      severity: "normal",
+      done:false,
+      producesEvidence: { type:"pub_stub", title:"Safe publish stub (mock)", payload:{ linkedTo:["Publish"], deltaId: delta.id } }
+    });
+  }
+
+  // Deduplicate
+  const seen = new Set();
+  const deduped = tasks.filter(t => (seen.has(t.title) ? false : (seen.add(t.title), true)));
+
+  log.debug("tasks", deduped);
+  log.groupEnd();
+  return deduped;
+}
+
+// ---------- Pitch Debugger: compile pack with delta applied ----------
+function compileDecisionPack(){
+  log.group(`PitchDebugger.compileDecisionPack() v${state.version}`);
+
+  const base = {
+    oneLiner: "Decision Pack stays underwritable as material changes trigger governed deltas and recompiles.",
+    icp: "Founders + investors + counsel (diligence & change control).",
+    assumptions: [
+      "Founders can provide receipts; OS converts deltas into tasks",
+      "Investors want a forwardable artifact as diligence deepens"
+    ],
+    riskRegister: [
+      { id:"R1", risk:"Claims drift as product changes", mitigation:"Material Change Publisher + delta routing", status:"open" },
+      { id:"R2", risk:"Disclosure leaks secret sauce", mitigation:"Disclosure sensitivity + redacted publish view", status:"open" }
+    ],
+    evidenceIndex: state.evidence.map(e => ({ id:e.id, type:e.type, title:e.title, ts:e.ts })),
+    deltaApplied: !!state.deltaPacket
+  };
+
+  // Apply delta impacts to risks / assumptions (simple)
+  if(state.deltaPacket){
+    base.riskRegister = base.riskRegister.map(r => ({...r}));
+    base.assumptions = base.assumptions.slice();
+
+    // if high severity changes exist: set R1 to mitigating (and add new risk)
+    if(state.deltaPacket.severitySummary.high > 0){
+      const r1 = base.riskRegister.find(r => r.id === "R1");
+      if(r1) r1.status = "mitigating";
+      base.riskRegister.push({ id:"R3", risk:"High-severity change impacts forwardability until updated", mitigation:"Complete delta tasks + re-run rubrics", status:"open" });
+    }
+
+    // Add assumption note
+    base.assumptions.push(`Delta ${state.deltaPacket.id} processed at ${state.deltaPacket.generatedAt}`);
+
+    // Add per-impact notes (mock)
+    const impactsSorted = Object.entries(state.deltaPacket.impactCounts).sort((a,b)=>b[1]-a[1]);
+    base.deltaSummary = {
+      id: state.deltaPacket.id,
+      generatedAt: state.deltaPacket.generatedAt,
+      impactCounts: state.deltaPacket.impactCounts,
+      routes: state.deltaPacket.routes,
+      topImpacts: impactsSorted.slice(0,3).map(([k,v]) => `${k} (${v})`)
+    };
+  }
+
+  // Gaps: if delta exists but tasks not done, block forwardability
+  const blockers = [];
+  if(state.deltaPacket){
+    const openBlockers = state.tasks.filter(t => t.severity === "blocker" && !t.done).length;
+    if(openBlockers > 0) blockers.push({ id:"G1", gap:`${openBlockers} blocker tasks still open from delta`, severity:"blocker" });
+  }
+
+  const dp = {
+    meta: { id: uid("DP"), version: state.version, compiledAt: nowIso(), title:"Decision Pack — Change Control (Demo)" },
+    base,
+    tasks: state.tasks,
+    gaps: blockers
+  };
+
+  log.debug("Decision Pack", dp);
+  log.groupEnd();
+  return dp;
+}
+
+// ---------- Rubrics ----------
+function runRubrics(dp){
+  log.group("WorkflowOS.runRubrics()");
+  const checks = [];
+  let score = 0;
+
+  const hasDelta = !!state.deltaPacket;
+  const deltaScore = hasDelta ? 20 : 0;
+  score += deltaScore;
+  checks.push({ key:"Delta captured", score:deltaScore, max:20, note: hasDelta ? "delta packet exists" : "no delta" });
+
+  const tasksTotal = state.tasks.length;
+  const tasksDone = state.tasks.filter(t => t.done).length;
+  const taskScore = tasksTotal === 0 ? 0 : Math.round(40 * (tasksDone / tasksTotal));
+  score += taskScore;
+  checks.push({ key:"Delta tasks completed", score:taskScore, max:40, note:`${tasksDone}/${tasksTotal} done` });
+
+  const blockersOpen = state.tasks.filter(t => t.severity === "blocker" && !t.done).length;
+  const blockerScore = blockersOpen === 0 ? 25 : Math.max(0, 25 - blockersOpen * 10);
+  score += blockerScore;
+  checks.push({ key:"Blockers closed", score:blockerScore, max:25, note:`open blockers: ${blockersOpen}` });
+
+  const publishReady = state.deltaPacket && state.deltaPacket.safeEntries.length > 0;
+  const pubEvidence = state.evidence.some(e => e.type === "pub_stub");
+  const pubScore = publishReady ? (pubEvidence ? 15 : 7) : 15;
+  score += pubScore;
+  checks.push({ key:"Safe disclosure readiness", score:pubScore, max:15, note: publishReady ? (pubEvidence ? "publish stub present" : "redaction possible") : "no external update needed" });
+
+  const gate = (score >= 80) && (blockersOpen === 0) ? "PASS" : "FAIL";
+  const rubric = { scoredAt: nowIso(), totalScore: score, gate, blockersOpen, checks };
+  log.debug("rubric", rubric);
+  log.groupEnd();
+  return rubric;
+}
+
+// ---------- Evidence production ----------
+function markTaskDone(taskId){
+  const t = state.tasks.find(x => x.id === taskId);
+  if(!t || t.done) return;
+
+  log.group("WorkflowOS.markTaskDone()");
+  log.debug("task", t);
+  t.done = true;
+
+  const ev = {
+    id: uid("EV"),
+    type: t.producesEvidence?.type || "trace",
+    title: t.producesEvidence?.title || `Task completed: ${t.title}`,
+    payload: t.producesEvidence?.payload || {},
+    ts: nowIso()
+  };
+  state.evidence.push(ev);
+  log.info("Produced evidence", ev);
+  log.groupEnd();
+  renderAll();
+}
+
+// ---------- Render ----------
+function renderTopPills(){
+  setPill(UI.versionPill, `<b class="mono">v${state.version}</b> • ${state.compiled ? "compiled" : "not compiled"}`);
+  UI.changeCount.textContent = String(state.changeLog.length);
+
+  setPill(UI.deltaPill, `Delta: <b>${state.deltaPacket ? "ready" : "none"}</b>`, state.deltaPacket ? "good" : "");
+  UI.taskCount.textContent = String(state.tasks.length);
+  UI.evCount.textContent = String(state.evidence.length);
+
+  if(state.score != null) setPill(UI.scorePill, `Score: <b>${state.score}</b>`, state.score >= 80 ? "good" : "warn");
+  else setPill(UI.scorePill, `Score: <b>—</b>`);
+
+  if(state.rubric?.gate) setPill(UI.gatePill, `Gate: <b>${state.rubric.gate}</b>`, state.rubric.gate === "PASS" ? "good" : "bad");
+  else setPill(UI.gatePill, `Gate: <b>—</b>`);
+
+  if(state.forwardable === true) setPill(UI.forwardPill, `Forwardable: <b>yes</b>`, "good");
+  else if(state.forwardable === false) setPill(UI.forwardPill, `Forwardable: <b>not yet</b>`, "warn");
+  else setPill(UI.forwardPill, `Forwardable: <b>unknown</b>`);
+
+  setPill(UI.deltaStatusPill, `Delta: <b>${state.deltaPacket ? "generated" : "none"}</b>`, state.deltaPacket ? "good" : "");
+  setPill(UI.pubPill, `Publish: <b>${state.deltaPacket ? (state.deltaPacket.safeEntries.length>0 ? "available" : "not needed") : "not prepared"}</b>`, state.deltaPacket ? "good" : "");
+}
+
+function renderLog(){
+  setPill(UI.logPill, `Log: <b>${state.changeLog.length ? "has entries" : "empty"}</b>`, state.changeLog.length ? "good" : "");
+
+  if(state.changeLog.length === 0){
+    UI.logView.innerHTML = `<div class="muted">No changes yet.</div>`;
+    return;
+  }
+
+  UI.logView.innerHTML = state.changeLog.slice().reverse().map(c => {
+    const tone = severityTone(c.severity);
+    return `
+      <div class="item ${tone}">
+        <div><b>${escapeHtml(c.title)}</b><span class="badge">${escapeHtml(c.type)}</span><span class="badge">${escapeHtml(c.severity)}</span><span class="badge">${escapeHtml(c.disclosure)}</span></div>
+        <div class="tiny mono">${escapeHtml(c.ts)} • impacts: ${escapeHtml(c.impacts.join(", "))}</div>
+        <div class="tiny muted" style="margin-top:6px;">${escapeHtml(c.details.slice(0,220))}${c.details.length>220?"…":""}</div>
+        <div class="row" style="margin-top:8px;">
+          <button onclick="removeChange('${c.id}')">Remove</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderTasks(){
+  if(state.tasks.length === 0){
+    setPill(UI.tasksPill, `Tasks: <b>not generated</b>`);
+    UI.tasksView.innerHTML = `<div class="muted">Process changes to generate tasks.</div>`;
+    return;
+  }
+  setPill(UI.tasksPill, `Tasks: <b>generated</b>`, "good");
+
+  UI.tasksView.innerHTML = state.tasks.map(t => {
+    const tone = t.severity === "blocker" ? "bad" : (t.done ? "good" : "");
+    const sev = t.severity === "blocker" ? `<span class="pill bad">blocker</span>` : `<span class="pill">task</span>`;
+    const done = t.done ? `<span class="pill good">done</span>` : "";
+    return `
+      <div class="item ${tone}">
+        <div><b>${escapeHtml(t.title)}</b></div>
+        <div class="tiny">${sev} ${done} <span class="pill">evidence: <b class="mono">${escapeHtml(t.producesEvidence?.type || "—")}</b></span></div>
+        <div class="row" style="margin-top:8px;">
+          <button ${t.done ? "disabled" : ""} onclick="markTaskDone('${t.id}')">Mark done</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderEvidence(){
+  UI.txtEvidence.value = JSON.stringify(state.evidence, null, 2);
+}
+
+function renderDelta(){
+  if(!state.deltaPacket){
+    UI.deltaView.innerHTML = `<div class="muted">Process changes to generate a delta packet.</div>`;
+    return;
+  }
+  const d = state.deltaPacket;
+  const impactsSorted = Object.entries(d.impactCounts).sort((a,b)=>b[1]-a[1]);
+
+  UI.deltaView.innerHTML = `
+    <div class="item ${d.severitySummary.high>0?"bad":(d.severitySummary.medium>0?"warn":"good")}">
+      <div class="kv"><div class="k">Delta ID</div><div class="v mono">${escapeHtml(d.id)}</div></div>
+      <div class="kv"><div class="k">Generated</div><div class="v mono">${escapeHtml(d.generatedAt)}</div></div>
+      <div class="kv"><div class="k">Severity summary</div><div class="v">high ${d.severitySummary.high} • medium ${d.severitySummary.medium} • low ${d.severitySummary.low}</div></div>
+      <div class="kv"><div class="k">Routes</div><div class="v">${escapeHtml(d.routes.join(" • "))}</div></div>
+      <div class="kv"><div class="k">Top impacts</div><div class="v">${escapeHtml(impactsSorted.slice(0,4).map(([k,v])=>`${k}(${v})`).join(" • "))}</div></div>
+    </div>
+    <div class="section">
+      <h3><span>Change entries (internal)</span><span class="pill">${d.changeCount} changes</span></h3>
+      <ul class="list">
+        ${d.changes.map(c => `<li><b>${escapeHtml(c.title)}</b> <span class="badge">${escapeHtml(c.type)}</span> <span class="badge">${escapeHtml(c.severity)}</span> <span class="badge">${escapeHtml(c.disclosure)}</span></li>`).join("")}
+      </ul>
+    </div>
+  `;
+}
+
+function renderPublish(){
+  if(!state.deltaPacket){
+    UI.pubView.innerHTML = `<div class="muted">Process changes to generate a safe publish summary.</div>`;
+    return;
+  }
+  const d = state.deltaPacket;
+  if(d.safeEntries.length === 0){
+    UI.pubView.innerHTML = `<div class="muted">No publishable changes (everything is internal-only).</div>`;
+    return;
+  }
+  UI.pubView.innerHTML = `
+    <div class="section">
+      <h3><span>Stakeholder Update (safe)</span><span class="pill good">redacted</span></h3>
+      <div class="tiny muted">This is what you could share externally without leaking sensitive details.</div>
+      <ul class="list">
+        ${d.safeEntries.map(e => `
+          <li>
+            <b>${escapeHtml(e.safeTitle)}</b> <span class="badge">${escapeHtml(e.type)}</span> <span class="badge">${escapeHtml(e.severity)}</span><br/>
+            <span class="muted">${escapeHtml(e.safeDetails)}</span>
+          </li>
+        `).join("")}
+      </ul>
+    </div>
+  `;
+}
+
+function renderDP(){
+  if(!state.dp){
+    UI.dpView.innerHTML = `<div class="muted">Compile to generate Decision Pack v0.</div>`;
+    return;
+  }
+  const dp = state.dp;
+
+  const risksHtml = `<ul class="list">${dp.base.riskRegister.map(r => `<li><b class="mono">${escapeHtml(r.id)}</b> ${escapeHtml(r.risk)} <span class="badge">${escapeHtml(r.status)}</span><br/><span class="muted">Mitigation:</span> ${escapeHtml(r.mitigation)}</li>`).join("")}</ul>`;
+  const evHtml = dp.base.evidenceIndex.length ? `<ul class="list">${dp.base.evidenceIndex.slice().reverse().map(e => `<li><span class="mono">${escapeHtml(e.type)}</span> — ${escapeHtml(e.title)} <span class="badge">${escapeHtml(e.ts)}</span></li>`).join("")}</ul>` : `<div class="muted">No evidence yet.</div>`;
+  const tasksHtml = dp.tasks.length ? `<ul class="list">${dp.tasks.map(t => `<li>${escapeHtml(t.title)} <span class="badge">${t.done ? "done" : "open"}</span> <span class="badge">${escapeHtml(t.severity)}</span></li>`).join("")}</ul>` : `<div class="muted">No tasks yet.</div>`;
+  const gapsHtml = dp.gaps.length ? `<ul class="list">${dp.gaps.map(g => `<li>${escapeHtml(g.gap)} <span class="badge">${escapeHtml(g.severity)}</span></li>`).join("")}</ul>` : `<div class="muted">No gaps flagged.</div>`;
+
+  UI.dpView.innerHTML = `
+    <div class="section">
+      <h3><span>Meta</span><span class="pill mono">v${dp.meta.version}</span></h3>
+      <div class="kv"><div class="k">One-liner</div><div class="v">${escapeHtml(dp.base.oneLiner)}</div></div>
+      <div class="kv"><div class="k">ICP</div><div class="v">${escapeHtml(dp.base.icp)}</div></div>
+      <div class="kv"><div class="k">Compiled</div><div class="v mono">${escapeHtml(dp.meta.compiledAt)}</div></div>
+      <div class="kv"><div class="k">Delta applied</div><div class="v">${dp.base.deltaApplied ? "yes" : "no"}</div></div>
+      ${dp.base.deltaSummary ? `<div class="kv"><div class="k">Delta summary</div><div class="v">top impacts: ${escapeHtml(dp.base.deltaSummary.topImpacts.join(" • "))}</div></div>` : ""}
+    </div>
+
+    <div class="section">
+      <h3><span>Assumptions</span><span class="pill">${dp.base.assumptions.length}</span></h3>
+      <ul class="list">${dp.base.assumptions.map(a => `<li>${escapeHtml(a)}</li>`).join("")}</ul>
+    </div>
+
+    <div class="section">
+      <h3><span>Risk Register</span><span class="pill">${dp.base.riskRegister.length} risks</span></h3>
+      ${risksHtml}
+    </div>
+
+    <div class="section">
+      <h3><span>Delta-driven Tasks</span><span class="pill">${dp.tasks.length} tasks</span></h3>
+      ${tasksHtml}
+    </div>
+
+    <div class="section">
+      <h3><span>Evidence Index</span><span class="pill">${dp.base.evidenceIndex.length} items</span></h3>
+      ${evHtml}
+    </div>
+
+    <div class="section">
+      <h3><span>Gaps</span><span class="pill">${dp.gaps.length} flagged</span></h3>
+      ${gapsHtml}
+    </div>
+  `;
+}
+
+function renderAll(){
+  renderTopPills();
+  renderLog();
+  renderTasks();
+  renderEvidence();
+  renderDelta();
+  renderPublish();
+  renderDP();
+}
+
+// ---------- Actions ----------
+function seedExampleChange(){
+  UI.selType.value = "competitor";
+  UI.selSeverity.value = "high";
+  // impacts
+  [...UI.selImpacts.options].forEach(o => o.selected = ["narrative","risk_register","evidence_plan","ip_layer"].includes(o.value));
+  UI.selDisclosure.value = "redactable";
+  UI.inpTitle.value = "Competitor shipped a similar 'pack compiler' feature; we must tighten novelty delta and safe disclosure.";
+  UI.txtDetails.value = "Competitor announced a new 'decision memo generator' and published screenshots. Our mitigation: update differentiation, attach evidence index linkage, and run IP refresh. Internal note: feature parity risk in 30–60 days; prioritize gating semantics + delta routing. Link: https://example.com/launch";
+}
+
+function clearForm(){
+  UI.selType.value = "pivot";
+  UI.selSeverity.value = "medium";
+  [...UI.selImpacts.options].forEach(o => o.selected = false);
+  UI.selDisclosure.value = "redactable";
+  UI.inpTitle.value = "";
+  UI.txtDetails.value = "";
+}
+
+function addChange(){
+  const impacts = selectedMulti(UI.selImpacts);
+  if(!UI.inpTitle.value.trim()){
+    alert("Please add a short description (title).");
+    return;
+  }
+  if(impacts.length === 0){
+    alert("Please select at least one impact area.");
+    return;
+  }
+
+  const entry = {
+    id: uid("CHG"),
+    ts: nowIso(),
+    type: UI.selType.value,
+    severity: UI.selSeverity.value,
+    impacts,
+    disclosure: UI.selDisclosure.value,
+    title: UI.inpTitle.value.trim(),
+    details: UI.txtDetails.value.trim() || "(no details)"
+  };
+
+  state.changeLog.push(entry); // immutable append
+  state.deltaPacket = null;    // requires re-process
+  state.tasks = [];
+  state.rubric = null;
+  state.score = null;
+  state.forwardable = "unknown";
+
+  log.info("Change appended to log", entry);
+  renderAll();
+}
+
+function removeChange(id){
+  state.changeLog = state.changeLog.filter(c => c.id !== id);
+  state.deltaPacket = null;
+  state.tasks = [];
+  state.rubric = null;
+  state.score = null;
+  state.forwardable = "unknown";
+  log.warn("Removed change", id);
+  renderAll();
+}
+
+function processChanges(){
+  const delta = processChangesToDelta();
+  if(!delta) return;
+
+  state.deltaPacket = delta;
+
+  // generate tasks
+  state.tasks = tasksFromDelta(delta);
+
+  // add evidence receipt for delta packet itself
+  state.evidence.push({
+    id: uid("EV"),
+    type: "delta_packet",
+    title: "Material Change delta packet generated (mock)",
+    payload: { linkedTo:["Delta.packet"], deltaId: delta.id },
+    ts: nowIso()
+  });
+
+  log.info("Delta processed", { deltaId: delta.id, routes: delta.routes, tasks: state.tasks.length });
+  renderAll();
+}
+
+function compile(){
+  if(state.compiled) state.version += 1;
+  state.compiled = true;
+
+  state.dp = compileDecisionPack();
+
+  // reset rubric after compile
+  state.rubric = null;
+  state.score = null;
+  state.forwardable = "unknown";
+
+  log.info("Compiled Decision Pack", { version: state.version, deltaApplied: !!state.deltaPacket });
+  renderAll();
+}
+
+function runRubricsBtn(){
+  if(!state.dp){
+    log.warn("No DP: compile first.");
+    return;
+  }
+  state.rubric = runRubrics(state.dp);
+  state.score = state.rubric.totalScore;
+  state.forwardable = (state.rubric.gate === "PASS");
+  log.info("Rubrics complete", { score: state.score, gate: state.rubric.gate });
+  renderAll();
+}
+
+function reset(){
+  log.info("Reset demo");
+  state.version = 0;
+  state.compiled = false;
+  state.changeLog = [];
+  state.deltaPacket = null;
+  state.tasks = [];
+  state.evidence = [];
+  state.dp = null;
+  state.rubric = null;
+  state.score = null;
+  state.forwardable = "unknown";
+  clearForm();
+  renderAll();
+}
+
+// ---------- Wire ----------
+initSelects();
+
+UI.btnSeedChange.addEventListener("click", seedExampleChange);
+UI.btnAddChange.addEventListener("click", addChange);
+UI.btnClearForm.addEventListener("click", clearForm);
+
+UI.btnProcessChanges.addEventListener("click", processChanges);
+UI.btnCompile.addEventListener("click", compile);
+UI.btnRunRubrics.addEventListener("click", runRubricsBtn);
+UI.btnReset.addEventListener("click", reset);
+
+// expose for inline onclick
+window.markTaskDone = markTaskDone;
+window.removeChange = removeChange;
+
+// boot
+reset();
+</script>
+</body>
+</html>

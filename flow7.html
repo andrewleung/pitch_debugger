@@ -1,0 +1,707 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Flow 7 Demo — Continuous Evidence Plan → Evidence Index Pipeline</title>
+  <style>
+    :root{
+      --bg:#0b1020; --panel:#0f1733; --panel2:#0c1430; --border:#243058;
+      --text:#e8ecff; --muted:#a9b4e6; --good:#38d39f; --warn:#ffd166; --bad:#ff6b6b; --accent:#7aa2ff;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:var(--sans); color:var(--text);
+      background:linear-gradient(180deg,#070b17 0%, #0b1020 45%, #060916 100%);
+    }
+    header{
+      padding:16px 20px; border-bottom:1px solid var(--border);
+      background:rgba(15,23,51,0.65); backdrop-filter: blur(8px);
+      position:sticky; top:0; z-index:5;
+      display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+    }
+    header h1{ margin:0; font-size:16px; letter-spacing:0.2px;}
+    header .sub{ color:var(--muted); font-size:12px; max-width:980px;}
+    .wrap{ padding:16px 20px 24px; max-width:1520px; margin:0 auto;}
+    .grid{ display:grid; grid-template-columns: 1.05fr 0.95fr; gap:14px; }
+    @media (max-width: 980px){ .grid{ grid-template-columns: 1fr; } }
+    .card{
+      border:1px solid var(--border); border-radius:14px; background:rgba(15,23,51,0.55);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.25); overflow:hidden;
+    }
+    .card .hd{
+      padding:12px 14px; border-bottom:1px solid var(--border);
+      display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+      background:linear-gradient(180deg, rgba(122,162,255,0.08), rgba(15,23,51,0.0));
+    }
+    .card .hd .title{ font-weight:950; font-size:13px; }
+    .card .hd .hint{ color:var(--muted); font-size:12px; }
+    .card .bd{ padding:12px 14px; }
+
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    button{
+      border:1px solid var(--border); background:#101a3a; color:var(--text);
+      padding:9px 10px; border-radius:10px; cursor:pointer; font-weight:800; font-size:12px;
+    }
+    button:hover{ border-color:#32407a; background:#0f1a3f; }
+    button.primary{ border-color: rgba(122,162,255,0.7); box-shadow:0 0 0 2px rgba(122,162,255,0.12) inset; }
+    button.danger{ border-color: rgba(255,107,107,0.75); }
+    button:disabled{ opacity:0.55; cursor:not-allowed; }
+
+    textarea, input, select{
+      width:100%; border-radius:12px; border:1px solid var(--border);
+      background:rgba(12,20,48,0.75); color:var(--text);
+      padding:10px 10px; font-size:12px; outline:none;
+    }
+    textarea{ min-height:88px; resize:vertical; font-family:var(--mono); line-height:1.35; }
+
+    .pill{
+      display:inline-flex; align-items:center; gap:6px;
+      padding:4px 8px; border-radius:999px;
+      border:1px solid var(--border); background:rgba(12,20,48,0.8);
+      font-size:11px; color:var(--muted);
+    }
+    .pill b{ color:var(--text); font-weight:950; }
+    .pill.good{ border-color: rgba(56,211,159,0.5); }
+    .pill.warn{ border-color: rgba(255,209,102,0.6); }
+    .pill.bad{ border-color: rgba(255,107,107,0.55); }
+    .mono{ font-family:var(--mono); }
+    .muted{ color:var(--muted); }
+    .tiny{ font-size:11px; color:var(--muted); }
+
+    .section{
+      border:1px solid rgba(36,48,88,0.75); background:rgba(12,20,48,0.45);
+      border-radius:12px; padding:10px; margin:10px 0;
+    }
+    .section h3{ margin:0 0 6px; font-size:12px; display:flex; align-items:center; justify-content:space-between; gap:10px;}
+
+    .two{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+    @media (max-width: 860px){ .two{ grid-template-columns:1fr; } }
+
+    .item{
+      border:1px solid var(--border); background:rgba(12,20,48,0.55);
+      border-radius:12px; padding:10px; margin:8px 0;
+    }
+    .item.good{ border-color: rgba(56,211,159,0.45); }
+    .item.warn{ border-color: rgba(255,209,102,0.55); }
+    .item.bad{ border-color: rgba(255,107,107,0.55); }
+
+    .list{ margin:6px 0 0; padding-left:16px; }
+    .list li{ margin:4px 0; font-size:12px; }
+    .kv{ display:grid; grid-template-columns: 140px 1fr; gap:8px; margin:4px 0; }
+    .kv .k{ color:var(--muted); font-size:11px; }
+    .kv .v{ font-size:12px; }
+
+    .badge{
+      display:inline-block; font-size:10px; padding:2px 6px; border-radius:8px;
+      border:1px dashed rgba(255,209,102,0.7); color:var(--warn); vertical-align:middle;
+    }
+    .progress{
+      height:10px; width:100%;
+      background:rgba(12,20,48,0.8);
+      border:1px solid var(--border);
+      border-radius:999px; overflow:hidden;
+    }
+    .bar{ height:100%; width:0%; background:rgba(122,162,255,0.65); }
+
+    .rightcol{ display:grid; grid-template-rows:auto 1fr auto; gap:14px;}
+    .chip{
+      padding:6px 8px; border-radius:10px; background:rgba(12,20,48,0.7); border:1px solid var(--border);
+      font-family:var(--mono); font-size:11px; color:var(--text); display:inline-flex; align-items:center; gap:8px;
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Flow 7 Demo: Continuous “Evidence Plan → Evidence Index” Pipeline</h1>
+    <div class="sub">
+      This demo shows a continuous pipeline: diligence questions / claims → an <b>Evidence Plan</b> (tasks) → produced <b>Evidence Objects</b> →
+      a continuously updated <b>Evidence Index</b> that binds claims to receipts and tracks coverage.
+      Open DevTools → Console for trace logs.
+    </div>
+  </div>
+  <div class="row">
+    <span class="pill mono" id="versionPill"><b>v0</b> • idle</span>
+    <span class="pill" id="coveragePill">Coverage: <b>—</b></span>
+    <span class="pill" id="bindPill">Bound claims: <b>—</b></span>
+    <span class="pill" id="openPill">Open tasks: <b>—</b></span>
+    <button class="primary" id="btnTick">Pipeline Tick (run)</button>
+    <button id="btnGeneratePlan">Generate Evidence Plan</button>
+    <button id="btnProduceEvidence">Produce Evidence (simulate)</button>
+    <button id="btnReindex">Rebuild Evidence Index</button>
+    <button class="danger" id="btnReset">Reset</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="grid">
+    <!-- LEFT: Inputs + Plan + Evidence -->
+    <div class="card">
+      <div class="hd">
+        <div>
+          <div class="title">Inputs → Evidence Plan → Evidence Objects</div>
+          <div class="hint">Edit claims/questions. Plan becomes tasks. Completing tasks produces evidence objects.</div>
+        </div>
+        <div class="row">
+          <span class="pill">Claims: <b id="claimCount">0</b></span>
+          <span class="pill">Questions: <b id="qCount">0</b></span>
+          <span class="pill">Evidence objs: <b id="evCount">0</b></span>
+        </div>
+      </div>
+      <div class="bd">
+        <div class="section">
+          <h3><span>Key claims (what must be underwritten)</span><span class="chip">input</span></h3>
+          <textarea id="txtClaims" placeholder="One claim per line. e.g., 'Pack stays forwardable via underwritable gates'"></textarea>
+          <div class="tiny muted" style="margin-top:6px;">Claims will require receipts. Pipeline tracks which claims are bound to evidence.</div>
+        </div>
+
+        <div class="section">
+          <h3><span>Diligence questions (what investors ask)</span><span class="chip">input</span></h3>
+          <textarea id="txtQuestions" placeholder="One question per line. e.g., 'How do you prove differentiation isn't just polish?'"></textarea>
+        </div>
+
+        <div class="section">
+          <h3><span>Evidence Plan (task list)</span><span class="pill" id="planPill">—</span></h3>
+          <div id="planView" class="muted">Click “Generate Evidence Plan” or “Pipeline Tick”.</div>
+        </div>
+
+        <div class="section">
+          <h3><span>Evidence Objects (vault)</span><span class="pill mono"><b>JSON</b></span></h3>
+          <textarea id="txtEvidence" readonly></textarea>
+        </div>
+
+        <div class="row">
+          <button class="primary" id="btnSeed">Seed example data</button>
+          <button id="btnMakeHard">Make it sparse (low coverage)</button>
+          <button id="btnClear">Clear inputs</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Evidence Index + Coverage -->
+    <div class="rightcol">
+      <div class="card">
+        <div class="hd">
+          <div>
+            <div class="title">Evidence Index (bindings + coverage)</div>
+            <div class="hint">Continuously updated mapping: claim/question → evidence refs.</div>
+          </div>
+          <div class="row">
+            <span class="pill" id="idxPill">Index items: <b id="idxCount">0</b></span>
+          </div>
+        </div>
+        <div class="bd" id="indexView">
+          <div class="muted">Run “Rebuild Evidence Index” or “Pipeline Tick”.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd">
+          <div>
+            <div class="title">Coverage diagnostics</div>
+            <div class="hint">Shows which claims are still unbound (no receipts) and what tasks are blockers.</div>
+          </div>
+        </div>
+        <div class="bd" id="diagView">
+          <div class="muted">Pipeline tick will update diagnostics.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd">
+          <div>
+            <div class="title">Recommended demo clicks</div>
+            <div class="hint">Show continuous pipeline behavior in 60–120 seconds.</div>
+          </div>
+        </div>
+        <div class="bd">
+          <ol class="list">
+            <li><b>Seed example data</b> → <b>Generate Evidence Plan</b></li>
+            <li><b>Rebuild Evidence Index</b> (show low coverage)</li>
+            <li><b>Produce Evidence</b> (complete 2–3 tasks)</li>
+            <li><b>Rebuild Evidence Index</b> (coverage rises, bindings appear)</li>
+            <li>Click <b>Pipeline Tick</b> twice (shows continuous loop)</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/**
+ * Flow 7 Demo:
+ * Continuous pipeline:
+ * Inputs (claims + diligence questions) -> Evidence Plan (tasks) -> Evidence Objects -> Evidence Index
+ * Evidence Index binds claims/questions to evidence refs and computes coverage.
+ */
+
+const log = {
+  info: (...a) => console.info("[flow7]", ...a),
+  debug: (...a) => console.debug("[flow7]", ...a),
+  warn: (...a) => console.warn("[flow7]", ...a),
+  group: (label) => console.group(label),
+  groupEnd: () => console.groupEnd(),
+};
+const uid = (p) => `${p}_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`;
+const nowIso = () => new Date().toISOString();
+const escapeHtml = (str) => String(str ?? "")
+  .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+  .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+
+const el = (id) => document.getElementById(id);
+const UI = {
+  versionPill: el("versionPill"),
+  coveragePill: el("coveragePill"),
+  bindPill: el("bindPill"),
+  openPill: el("openPill"),
+
+  btnTick: el("btnTick"),
+  btnGeneratePlan: el("btnGeneratePlan"),
+  btnProduceEvidence: el("btnProduceEvidence"),
+  btnReindex: el("btnReindex"),
+  btnReset: el("btnReset"),
+
+  txtClaims: el("txtClaims"),
+  txtQuestions: el("txtQuestions"),
+  planView: el("planView"),
+  planPill: el("planPill"),
+  txtEvidence: el("txtEvidence"),
+
+  claimCount: el("claimCount"),
+  qCount: el("qCount"),
+  evCount: el("evCount"),
+
+  idxPill: el("idxPill"),
+  idxCount: el("idxCount"),
+  indexView: el("indexView"),
+  diagView: el("diagView"),
+
+  btnSeed: el("btnSeed"),
+  btnMakeHard: el("btnMakeHard"),
+  btnClear: el("btnClear"),
+};
+
+function setPill(pillEl, html, tone){
+  pillEl.classList.remove("good","warn","bad");
+  if(tone) pillEl.classList.add(tone);
+  pillEl.innerHTML = html;
+}
+function parseLines(txt){
+  return String(txt||"").split("\n").map(s=>s.trim()).filter(Boolean);
+}
+function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
+
+// ---- State ----
+const state = {
+  version: 0,
+  tasks: [],
+  evidence: [],
+  index: [],
+  stats: { coveragePct: 0, boundClaims:0, openTasks:0 },
+  lastRunAt: null
+};
+
+function inputs(){
+  return {
+    claims: parseLines(UI.txtClaims.value),
+    questions: parseLines(UI.txtQuestions.value),
+  };
+}
+
+// ---- Evidence Plan generator (Workflow OS) ----
+function generateEvidencePlan(){
+  const inp = inputs();
+  log.group("WorkflowOS.generateEvidencePlan()");
+  log.debug("inputs", inp);
+
+  const tasks = [];
+
+  // For each claim: propose 1-2 tasks to produce receipts
+  inp.claims.forEach((c, i) => {
+    tasks.push(task(
+      `Collect receipt for claim #${i+1}: ${c}`,
+      i === 0 ? "blocker" : "normal",
+      "receipt",
+      `Receipt: support for claim #${i+1}`,
+      { claim: c, bindTo: { type:"claim", value:c } }
+    ));
+    // optionally add an interview/pilot task
+    if(/prove|evidence|underwrite|forward|defens/i.test(c.toLowerCase())){
+      tasks.push(task(
+        `Interview 2 stakeholders to validate claim #${i+1}`,
+        "normal",
+        "interview_notes",
+        `Interview notes for claim #${i+1}`,
+        { claim: c, bindTo: { type:"claim", value:c } }
+      ));
+    }
+  });
+
+  // For questions: propose a task to answer via evidence
+  inp.questions.forEach((q, j) => {
+    tasks.push(task(
+      `Answer diligence Q${j+1} with receipts: ${q}`,
+      j < 2 ? "blocker" : "normal",
+      "qa_memo",
+      `Q&A memo for Q${j+1}`,
+      { question: q, bindTo: { type:"question", value:q } }
+    ));
+  });
+
+  // De-duplicate by title
+  const existing = new Set(state.tasks.map(t=>t.title));
+  let added = 0;
+  tasks.forEach(t => {
+    if(!existing.has(t.title)){
+      state.tasks.push(t);
+      existing.add(t.title);
+      added += 1;
+    }
+  });
+
+  log.info(`Generated ${tasks.length} tasks, added ${added} new tasks`);
+  log.groupEnd();
+
+  state.version += 1;
+  state.lastRunAt = nowIso();
+  renderAll();
+}
+
+// ---- Task / evidence production ----
+function task(title, severity, evidenceType, evidenceTitle, payload){
+  return {
+    id: uid("T"),
+    title,
+    severity, // blocker|normal
+    done: false,
+    createdAt: nowIso(),
+    producesEvidence: { type:evidenceType, title:evidenceTitle, payload: payload||{} }
+  };
+}
+
+function markTaskDone(taskId){
+  const t = state.tasks.find(x => x.id === taskId);
+  if(!t || t.done) return;
+
+  log.group("Pipeline.markTaskDone()");
+  log.debug("task", t);
+
+  t.done = true;
+
+  const ev = {
+    id: uid("EV"),
+    type: t.producesEvidence.type,
+    title: t.producesEvidence.title,
+    payload: t.producesEvidence.payload,
+    createdAt: nowIso()
+  };
+  state.evidence.push(ev);
+
+  log.info("Produced evidence", ev);
+  log.groupEnd();
+
+  renderAll();
+}
+window.markTaskDone = markTaskDone;
+
+function produceEvidenceSim(){
+  // Complete up to 3 tasks (prefer blockers)
+  const open = state.tasks.filter(t => !t.done);
+  const blockers = open.filter(t => t.severity === "blocker");
+  const pick = blockers.slice(0,2).concat(open.filter(t=>t.severity!=="blocker").slice(0, Math.max(0,3-blockers.slice(0,2).length)));
+  if(pick.length === 0){
+    log.info("No open tasks to produce evidence.");
+    return;
+  }
+  log.info("Sim producing evidence for", pick.map(t=>t.title));
+  pick.forEach(t => markTaskDone(t.id));
+}
+
+// ---- Evidence Index builder ----
+function rebuildEvidenceIndex(){
+  log.group("Indexer.rebuildEvidenceIndex()");
+  const inp = inputs();
+
+  // Build bindings
+  const idx = [];
+
+  function refsFor(bindType, value){
+    return state.evidence
+      .filter(e => e.payload?.bindTo?.type === bindType && e.payload?.bindTo?.value === value)
+      .map(e => ({ id:e.id, type:e.type, title:e.title, at:e.createdAt }));
+  }
+
+  inp.claims.forEach((c) => {
+    const refs = refsFor("claim", c);
+    idx.push({
+      keyType: "claim",
+      key: c,
+      refs,
+      status: refs.length ? "BOUND" : "UNBOUND"
+    });
+  });
+
+  inp.questions.forEach((q) => {
+    const refs = refsFor("question", q);
+    idx.push({
+      keyType: "question",
+      key: q,
+      refs,
+      status: refs.length ? "BOUND" : "UNBOUND"
+    });
+  });
+
+  // Coverage: percent of claims bound (only claims, not questions)
+  const boundClaims = idx.filter(x => x.keyType === "claim" && x.status === "BOUND").length;
+  const totalClaims = inp.claims.length || 0;
+  const coveragePct = totalClaims ? Math.round(100 * (boundClaims / totalClaims)) : 0;
+
+  state.index = idx;
+  state.stats.boundClaims = boundClaims;
+  state.stats.coveragePct = coveragePct;
+  state.stats.openTasks = state.tasks.filter(t => !t.done).length;
+
+  log.info("Index size", idx.length, "coveragePct", coveragePct, "boundClaims", boundClaims);
+  log.groupEnd();
+
+  renderAll();
+}
+
+// ---- Pipeline tick ----
+function pipelineTick(){
+  log.group("Pipeline.tick()");
+  const inp = inputs();
+
+  // Step A: ensure plan exists for current inputs
+  if(inp.claims.length + inp.questions.length > 0){
+    const titles = new Set(state.tasks.map(t => t.title));
+    const expectedMin = inp.claims.length + inp.questions.length;
+    if(state.tasks.length < expectedMin || [...titles].length < state.tasks.length){
+      log.debug("Plan seems incomplete; generating evidence plan...");
+      generateEvidencePlan();
+    } else {
+      log.debug("Plan exists; no regeneration needed.");
+    }
+  } else {
+    log.debug("No inputs; skipping plan generation.");
+  }
+
+  // Step B: produce evidence occasionally (simulate work happening over time)
+  // We'll produce evidence if coverage < 80 and there are open tasks.
+  const open = state.tasks.filter(t => !t.done).length;
+  if(open > 0){
+    log.debug("Simulating work: producing evidence for up to 2 tasks.");
+    // produce a small amount each tick
+    const openTasks = state.tasks.filter(t => !t.done);
+    const blockers = openTasks.filter(t => t.severity === "blocker");
+    const pick = blockers.slice(0,1).concat(openTasks.filter(t=>t.severity!=="blocker").slice(0,1));
+    pick.forEach(t => markTaskDone(t.id));
+  }
+
+  // Step C: rebuild index
+  rebuildEvidenceIndex();
+
+  state.version += 1;
+  state.lastRunAt = nowIso();
+  log.groupEnd();
+}
+
+// ---- Render ----
+function renderTop(){
+  setPill(UI.versionPill, `<b class="mono">v${state.version}</b> • ${state.lastRunAt ? "ran" : "idle"}`);
+  const cov = state.stats.coveragePct;
+  const covTone = cov >= 80 ? "good" : (cov >= 40 ? "warn" : "bad");
+  setPill(UI.coveragePill, `Coverage: <b>${cov}%</b>`, covTone);
+
+  setPill(UI.bindPill, `Bound claims: <b>${state.stats.boundClaims}</b>`, state.stats.boundClaims ? "good" : "warn");
+  setPill(UI.openPill, `Open tasks: <b>${state.stats.openTasks}</b>`, state.stats.openTasks ? "warn" : "good");
+
+  const inp = inputs();
+  UI.claimCount.textContent = String(inp.claims.length);
+  UI.qCount.textContent = String(inp.questions.length);
+  UI.evCount.textContent = String(state.evidence.length);
+
+  UI.idxCount.textContent = String(state.index.length);
+}
+
+function renderPlan(){
+  if(state.tasks.length === 0){
+    setPill(UI.planPill, "—");
+    UI.planView.innerHTML = `<div class="muted">No tasks yet. Generate a plan.</div>`;
+    return;
+  }
+  const open = state.tasks.filter(t => !t.done).length;
+  setPill(UI.planPill, `tasks: <b>${state.tasks.length}</b> • open <b>${open}</b>`, open ? "warn" : "good");
+
+  UI.planView.innerHTML = state.tasks
+    .slice()
+    .sort((a,b) => Number(a.done) - Number(b.done) || (a.severity === "blocker" ? -1 : 1))
+    .map(t => {
+      const tone = t.done ? "good" : (t.severity === "blocker" ? "bad" : "warn");
+      const sev = t.severity === "blocker" ? `<span class="badge">blocker</span>` : `<span class="badge">task</span>`;
+      const done = t.done ? `<span class="pill good">done</span>` : `<span class="pill">open</span>`;
+      return `
+        <div class="item ${tone}">
+          <div class="row" style="justify-content:space-between; align-items:flex-start;">
+            <div style="flex:1; min-width:220px;">
+              <b>${escapeHtml(t.title)}</b>
+              <div class="tiny muted" style="margin-top:4px;">Produces: <span class="mono">${escapeHtml(t.producesEvidence.type)}</span></div>
+            </div>
+            <div class="row">${sev} ${done}</div>
+          </div>
+          <div class="row" style="margin-top:8px;">
+            <button ${t.done ? "disabled" : ""} onclick="markTaskDone('${t.id}')">Mark done</button>
+          </div>
+        </div>
+      `;
+    }).join("");
+}
+
+function renderEvidence(){
+  UI.txtEvidence.value = JSON.stringify(state.evidence, null, 2);
+}
+
+function renderIndex(){
+  if(state.index.length === 0){
+    UI.indexView.innerHTML = `<div class="muted">No index yet. Rebuild index.</div>`;
+    setPill(UI.idxPill, `Index items: <b>0</b>`);
+    return;
+  }
+  setPill(UI.idxPill, `Index items: <b>${state.index.length}</b>`, "good");
+
+  UI.indexView.innerHTML = state.index.map(item => {
+    const tone = item.status === "BOUND" ? "good" : "bad";
+    const refs = item.refs.length
+      ? `<ul class="list">${item.refs.slice().reverse().slice(0,4).map(r => `<li><span class="mono">${escapeHtml(r.type)}</span> — ${escapeHtml(r.title)} <span class="badge">${escapeHtml(r.id)}</span></li>`).join("")}</ul>`
+      : `<div class="muted">No receipts yet.</div>`;
+    return `
+      <div class="item ${tone}">
+        <div class="row" style="justify-content:space-between; align-items:flex-start;">
+          <div style="flex:1; min-width:220px;">
+            <b>${escapeHtml(item.keyType.toUpperCase())}</b>: ${escapeHtml(item.key)}
+          </div>
+          <div class="row">
+            <span class="pill ${item.status === "BOUND" ? "good" : "bad"}">${escapeHtml(item.status)}</span>
+            <span class="pill">refs <b>${item.refs.length}</b></span>
+          </div>
+        </div>
+        <div class="section" style="margin-top:10px;">
+          <h3><span>Evidence refs</span><span class="pill">${item.refs.length}</span></h3>
+          ${refs}
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderDiagnostics(){
+  const inp = inputs();
+  const unboundClaims = state.index.filter(x => x.keyType === "claim" && x.status === "UNBOUND").map(x=>x.key);
+  const openBlockers = state.tasks.filter(t => !t.done && t.severity === "blocker");
+
+  const cov = state.stats.coveragePct;
+  const covTone = cov >= 80 ? "good" : (cov >= 40 ? "warn" : "bad");
+
+  UI.diagView.innerHTML = `
+    <div class="section">
+      <h3><span>Coverage</span><span class="pill ${covTone}">${cov}%</span></h3>
+      <div class="kv"><div class="k">Claims total</div><div class="v">${inp.claims.length}</div></div>
+      <div class="kv"><div class="k">Claims bound</div><div class="v">${state.stats.boundClaims}</div></div>
+      <div class="kv"><div class="k">Open tasks</div><div class="v">${state.stats.openTasks}</div></div>
+    </div>
+
+    <div class="section">
+      <h3><span>Unbound claims</span><span class="pill bad">${unboundClaims.length}</span></h3>
+      ${unboundClaims.length ? `<ul class="list">${unboundClaims.map(c=>`<li>${escapeHtml(c)}</li>`).join("")}</ul>` : `<div class="muted">All claims have at least one receipt.</div>`}
+    </div>
+
+    <div class="section">
+      <h3><span>Blockers</span><span class="pill ${openBlockers.length ? "bad" : "good"}">${openBlockers.length}</span></h3>
+      ${openBlockers.length ? `<ul class="list">${openBlockers.map(t=>`<li>${escapeHtml(t.title)}</li>`).join("")}</ul>` : `<div class="muted">No blockers.</div>`}
+    </div>
+  `;
+}
+
+function renderAll(){
+  renderTop();
+  renderPlan();
+  renderEvidence();
+  renderIndex();
+  renderDiagnostics();
+}
+
+// ---- Seed / actions ----
+function seed(){
+  UI.txtClaims.value = [
+    "Decision Pack stays forwardable via underwritable gates (rubrics as go/no-go)",
+    "Evidence index binds claims → receipts so confidence is inspectable",
+    "Two-track output enables safe investor disclosure while preserving attorney depth"
+  ].join("\n");
+
+  UI.txtQuestions.value = [
+    "What proof shows investors this is more than a template?",
+    "How do you prevent the deck from drifting as diligence deepens?",
+    "How do you avoid leaking secret sauce while still being forwardable?"
+  ].join("\n");
+
+  state.version += 1;
+  state.lastRunAt = null;
+  renderAll();
+}
+
+function makeSparse(){
+  UI.txtClaims.value = "We make founders pitch better.";
+  UI.txtQuestions.value = "Why are you different?";
+  state.tasks = [];
+  state.evidence = [];
+  state.index = [];
+  state.stats = { coveragePct: 0, boundClaims:0, openTasks:0 };
+  state.version += 1;
+  renderAll();
+}
+
+function clearInputs(){
+  UI.txtClaims.value = "";
+  UI.txtQuestions.value = "";
+  state.tasks = [];
+  state.evidence = [];
+  state.index = [];
+  state.stats = { coveragePct: 0, boundClaims:0, openTasks:0 };
+  state.version += 1;
+  renderAll();
+}
+
+function reset(){
+  log.info("Reset demo");
+  state.version = 0;
+  state.tasks = [];
+  state.evidence = [];
+  state.index = [];
+  state.stats = { coveragePct: 0, boundClaims:0, openTasks:0 };
+  state.lastRunAt = null;
+  UI.txtClaims.value = "";
+  UI.txtQuestions.value = "";
+  renderAll();
+}
+
+// ---- Wire buttons ----
+UI.btnSeed.addEventListener("click", seed);
+UI.btnMakeHard.addEventListener("click", makeSparse);
+UI.btnClear.addEventListener("click", clearInputs);
+
+UI.btnGeneratePlan.addEventListener("click", generateEvidencePlan);
+UI.btnProduceEvidence.addEventListener("click", produceEvidenceSim);
+UI.btnReindex.addEventListener("click", rebuildEvidenceIndex);
+UI.btnTick.addEventListener("click", pipelineTick);
+
+UI.btnReset.addEventListener("click", reset);
+
+// Boot
+reset();
+</script>
+</body>
+</html>

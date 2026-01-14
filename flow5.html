@@ -1,0 +1,915 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Flow 5 Demo — Underwritable Gates (Rubrics as Go/No-Go Checkpoints)</title>
+  <style>
+    :root{
+      --bg:#0b1020; --panel:#0f1733; --panel2:#0c1430; --border:#243058;
+      --text:#e8ecff; --muted:#a9b4e6; --good:#38d39f; --warn:#ffd166; --bad:#ff6b6b; --accent:#7aa2ff;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:var(--sans); color:var(--text);
+      background:linear-gradient(180deg,#070b17 0%, #0b1020 45%, #060916 100%);
+    }
+    header{
+      padding:16px 20px; border-bottom:1px solid var(--border);
+      background:rgba(15,23,51,0.65); backdrop-filter: blur(8px);
+      position:sticky; top:0; z-index:5;
+      display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+    }
+    header h1{ margin:0; font-size:16px; letter-spacing:0.2px;}
+    header .sub{ color:var(--muted); font-size:12px; max-width:980px;}
+    .wrap{ padding:16px 20px 24px; max-width:1520px; margin:0 auto;}
+    .grid{ display:grid; grid-template-columns: 1.05fr 0.95fr; gap:14px; }
+    @media (max-width: 980px){ .grid{ grid-template-columns: 1fr; } }
+
+    .card{
+      border:1px solid var(--border); border-radius:14px; background:rgba(15,23,51,0.55);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.25); overflow:hidden;
+    }
+    .card .hd{
+      padding:12px 14px; border-bottom:1px solid var(--border);
+      display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+      background:linear-gradient(180deg, rgba(122,162,255,0.08), rgba(15,23,51,0.0));
+    }
+    .card .hd .title{ font-weight:950; font-size:13px; }
+    .card .hd .hint{ color:var(--muted); font-size:12px; }
+    .card .bd{ padding:12px 14px; }
+
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    button{
+      border:1px solid var(--border); background:#101a3a; color:var(--text);
+      padding:9px 10px; border-radius:10px; cursor:pointer; font-weight:800; font-size:12px;
+    }
+    button:hover{ border-color:#32407a; background:#0f1a3f; }
+    button.primary{ border-color: rgba(122,162,255,0.7); box-shadow:0 0 0 2px rgba(122,162,255,0.12) inset; }
+    button.danger{ border-color: rgba(255,107,107,0.75); }
+    button:disabled{ opacity:0.55; cursor:not-allowed; }
+
+    textarea, input, select{
+      width:100%; border-radius:12px; border:1px solid var(--border);
+      background:rgba(12,20,48,0.75); color:var(--text);
+      padding:10px 10px; font-size:12px; outline:none;
+    }
+    textarea{ min-height:92px; resize:vertical; font-family:var(--mono); line-height:1.35; }
+
+    .pill{
+      display:inline-flex; align-items:center; gap:6px;
+      padding:4px 8px; border-radius:999px;
+      border:1px solid var(--border); background:rgba(12,20,48,0.8);
+      font-size:11px; color:var(--muted);
+    }
+    .pill b{ color:var(--text); font-weight:950; }
+    .pill.good{ border-color: rgba(56,211,159,0.5); }
+    .pill.warn{ border-color: rgba(255,209,102,0.6); }
+    .pill.bad{ border-color: rgba(255,107,107,0.55); }
+    .mono{ font-family:var(--mono); }
+    .muted{ color:var(--muted); }
+    .tiny{ font-size:11px; color:var(--muted); }
+
+    .section{
+      border:1px solid rgba(36,48,88,0.75); background:rgba(12,20,48,0.45);
+      border-radius:12px; padding:10px; margin:10px 0;
+    }
+    .section h3{ margin:0 0 6px; font-size:12px; display:flex; align-items:center; justify-content:space-between; gap:10px;}
+    .hr{ height:1px; background:var(--border); margin:12px 0; opacity:0.85; }
+
+    .two{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+    @media (max-width: 860px){ .two{ grid-template-columns:1fr; } }
+
+    .gate{
+      border:1px solid var(--border); border-radius:14px;
+      background:rgba(12,20,48,0.55);
+      padding:12px; margin:10px 0;
+    }
+    .gate.good{ border-color: rgba(56,211,159,0.45); }
+    .gate.warn{ border-color: rgba(255,209,102,0.55); }
+    .gate.bad{ border-color: rgba(255,107,107,0.55); }
+    .gate .top{
+      display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+    }
+    .gate .name{ font-weight:950; }
+    .gate .desc{ color:var(--muted); font-size:12px; margin-top:4px; }
+    .gate .meta{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+    .badge{
+      display:inline-block; font-size:10px; padding:2px 6px; border-radius:8px;
+      border:1px dashed rgba(255,209,102,0.7); color:var(--warn); vertical-align:middle;
+    }
+    .checklist{ margin:8px 0 0; padding-left:16px; }
+    .checklist li{ margin:4px 0; font-size:12px; }
+    .ok{ color: var(--good); font-weight:900; }
+    .no{ color: var(--bad); font-weight:900; }
+    .item{
+      border:1px solid var(--border); background:rgba(12,20,48,0.55);
+      border-radius:12px; padding:10px; margin:8px 0;
+    }
+    .item.good{ border-color: rgba(56,211,159,0.45); }
+    .item.warn{ border-color: rgba(255,209,102,0.55); }
+    .item.bad{ border-color: rgba(255,107,107,0.55); }
+    .list{ margin:6px 0 0; padding-left:16px; }
+    .list li{ margin:4px 0; font-size:12px; }
+    .kv{ display:grid; grid-template-columns: 170px 1fr; gap:8px; margin:4px 0; }
+    .kv .k{ color:var(--muted); font-size:11px; }
+    .kv .v{ font-size:12px; }
+    .chip{
+      padding:6px 8px; border-radius:10px; background:rgba(12,20,48,0.7); border:1px solid var(--border);
+      font-family:var(--mono); font-size:11px; color:var(--text); display:inline-flex; align-items:center; gap:8px;
+    }
+    .rightcol{ display:grid; grid-template-rows:auto auto 1fr; gap:14px;}
+    .progress{
+      height:10px; width:100%;
+      background:rgba(12,20,48,0.8);
+      border:1px solid var(--border);
+      border-radius:999px; overflow:hidden;
+    }
+    .bar{ height:100%; width:0%; background:rgba(122,162,255,0.65); }
+  </style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Flow 5 Demo: “Underwritable Gates” — Rubrics as Go/No-Go Checkpoints</h1>
+    <div class="sub">
+      This demo shows multiple underwriting gates (e.g., Problem Clarity, Evidence Coverage, IP Delta, Safe Disclosure). Each gate runs a rubric, returns PASS/FAIL with reasons,
+      and generates specific tasks to get back to PASS. Open DevTools → Console for trace logs.
+    </div>
+  </div>
+  <div class="row">
+    <span class="pill mono" id="versionPill"><b>v0</b> • not compiled</span>
+    <span class="pill" id="overallPill">Overall: <b>—</b></span>
+    <span class="pill mono" id="scorePill">Score: <b>—</b></span>
+    <button class="primary" id="btnRunAll">Run All Gates</button>
+    <button id="btnCompile">Compile / Recompile</button>
+    <button id="btnAutofix">Autofix (do a few tasks)</button>
+    <button class="danger" id="btnReset">Reset</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="grid">
+    <!-- LEFT: INPUTS + TASKS -->
+    <div class="card">
+      <div class="hd">
+        <div>
+          <div class="title">Inputs (Decision Pack facts) + Task Board (to clear gates)</div>
+          <div class="hint">Toggle inputs to simulate “thin” vs “underwritable.” Gates translate failures into tasks.</div>
+        </div>
+        <div class="row">
+          <span class="pill">Tasks: <b id="taskCount">0</b></span>
+          <span class="pill">Evidence: <b id="evCount">0</b></span>
+          <span class="pill">Open blockers: <b id="blockerCount">0</b></span>
+        </div>
+      </div>
+
+      <div class="bd">
+        <div class="section">
+          <h3><span>Decision Pack Inputs (mock)</span><span class="chip">toggle to change gate outcomes</span></h3>
+
+          <div class="two">
+            <div>
+              <div class="tiny">Problem statement (1–2 sentences)</div>
+              <textarea id="txtProblem" placeholder="What painful, frequent, expensive problem? For whom?"></textarea>
+              <div class="tiny" style="margin-top:8px;">ICP (who is the buyer)</div>
+              <input id="inpICP" placeholder="e.g., Pre-seed founders + angel investors + IP counsel" />
+            </div>
+            <div>
+              <div class="tiny">Secret sauce claim hooks (one per line)</div>
+              <textarea id="txtHooks" placeholder="e.g., Rubric-gated pack that links claims → receipts → confidence"></textarea>
+              <div class="tiny" style="margin-top:8px;">Traction receipts present?</div>
+              <select id="selTraction">
+                <option value="none" selected>None (no receipts)</option>
+                <option value="some">Some (weak receipts)</option>
+                <option value="strong">Strong (credible receipts)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="two" style="margin-top:10px;">
+            <div>
+              <div class="tiny">IP delta present?</div>
+              <select id="selIP">
+                <option value="no" selected>No (not run)</option>
+                <option value="partial">Partial (adjacency noted)</option>
+                <option value="yes">Yes (delta + action plan)</option>
+              </select>
+
+              <div class="tiny" style="margin-top:10px;">Safe disclosure readiness</div>
+              <select id="selDisclosure">
+                <option value="no" selected>No (risk of leaking)</option>
+                <option value="redactable">Redactable (safe summary possible)</option>
+                <option value="yes">Yes (safe publish stub)</option>
+              </select>
+            </div>
+
+            <div>
+              <div class="tiny">Evidence coverage (%)</div>
+              <input id="rngEvidence" type="range" min="0" max="100" value="15" />
+              <div class="row" style="margin-top:6px;">
+                <span class="pill">Coverage: <b id="evPct">15</b>%</span>
+                <span class="pill">Risk register present: <b id="riskPresent">yes</b></span>
+              </div>
+              <div class="tiny muted" style="margin-top:6px;">
+                Think: “Do claims link to receipts?” Not just “do docs exist?”
+              </div>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <button class="primary" id="btnSeed">Seed decent inputs</button>
+            <button id="btnMakeWorse">Make it thin (fail gates)</button>
+            <button id="btnClearInputs">Clear</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3><span>Task Board</span><span class="pill" id="tasksPill">Generated by gates</span></h3>
+          <div id="tasksView" class="muted">Run gates to generate tasks.</div>
+        </div>
+
+        <div class="section">
+          <h3><span>Evidence Vault</span><span class="pill mono"><b>JSON</b></span></h3>
+          <textarea id="txtEvidence" readonly></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: GATES + CANONICAL PACK -->
+    <div class="rightcol">
+      <div class="card">
+        <div class="hd">
+          <div>
+            <div class="title">Underwritable Gates (rubrics)</div>
+            <div class="hint">Each gate returns PASS/FAIL, score, and remediation tasks.</div>
+          </div>
+          <div class="row">
+            <span class="pill" id="passCountPill">PASS: <b id="passCount">0</b></span>
+            <span class="pill" id="failCountPill">FAIL: <b id="failCount">0</b></span>
+          </div>
+        </div>
+        <div class="bd" id="gatesView">
+          <div class="muted">Run All Gates to see rubric checkpoints.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd">
+          <div>
+            <div class="title">Compile Output (what gets forwarded)</div>
+            <div class="hint">Compilation only becomes “forwardable” if gates pass.</div>
+          </div>
+          <div class="row">
+            <span class="pill" id="forwardPill">Forwardable: <b>unknown</b></span>
+          </div>
+        </div>
+        <div class="bd" id="packView">
+          <div class="muted">Compile to generate the current “forwardable artifact” snapshot.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd">
+          <div>
+            <div class="title">Console-friendly Trace</div>
+            <div class="hint">Open DevTools → Console. Gates emit structured reasons.</div>
+          </div>
+        </div>
+        <div class="bd">
+          <div class="section">
+            <h3><span>How to demo quickly</span><span class="pill good">script</span></h3>
+            <ol class="list">
+              <li>Click <b>Make it thin</b> → <b>Run All Gates</b> (show FAIL reasons + tasks)</li>
+              <li>Click <b>Autofix</b> a few times (complete tasks + add evidence)</li>
+              <li>Click <b>Run All Gates</b> again (watch PASS count increase)</li>
+              <li>Click <b>Compile</b> once overall is PASS (artifact becomes forwardable)</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/**
+ * Flow 5 Demo:
+ * Rubrics as go/no-go checkpoints ("underwritable gates").
+ * Gates evaluate inputs + evidence coverage and generate remediation tasks.
+ * Debug: open DevTools console.
+ */
+
+const log = {
+  info: (...a) => console.info("[flow5]", ...a),
+  debug: (...a) => console.debug("[flow5]", ...a),
+  warn: (...a) => console.warn("[flow5]", ...a),
+  group: (label) => console.group(label),
+  groupEnd: () => console.groupEnd(),
+};
+
+const uid = (p) => `${p}_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`;
+const nowIso = () => new Date().toISOString();
+const escapeHtml = (str) => String(str ?? "")
+  .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+  .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+
+const el = (id) => document.getElementById(id);
+
+const UI = {
+  versionPill: el("versionPill"),
+  overallPill: el("overallPill"),
+  scorePill: el("scorePill"),
+  forwardPill: el("forwardPill"),
+
+  passCount: el("passCount"),
+  failCount: el("failCount"),
+  passCountPill: el("passCountPill"),
+  failCountPill: el("failCountPill"),
+
+  taskCount: el("taskCount"),
+  evCount: el("evCount"),
+  blockerCount: el("blockerCount"),
+
+  txtProblem: el("txtProblem"),
+  inpICP: el("inpICP"),
+  txtHooks: el("txtHooks"),
+  selTraction: el("selTraction"),
+  selIP: el("selIP"),
+  selDisclosure: el("selDisclosure"),
+  rngEvidence: el("rngEvidence"),
+  evPct: el("evPct"),
+  riskPresent: el("riskPresent"),
+
+  btnRunAll: el("btnRunAll"),
+  btnCompile: el("btnCompile"),
+  btnAutofix: el("btnAutofix"),
+  btnReset: el("btnReset"),
+
+  btnSeed: el("btnSeed"),
+  btnMakeWorse: el("btnMakeWorse"),
+  btnClearInputs: el("btnClearInputs"),
+
+  tasksPill: el("tasksPill"),
+  tasksView: el("tasksView"),
+  txtEvidence: el("txtEvidence"),
+
+  gatesView: el("gatesView"),
+  packView: el("packView"),
+};
+
+function setPill(pillEl, html, tone){
+  pillEl.classList.remove("good","warn","bad");
+  if(tone) pillEl.classList.add(tone);
+  pillEl.innerHTML = html;
+}
+
+function toneFromGate(g){
+  if(g.status === "PASS") return "good";
+  if(g.status === "FAIL") return "bad";
+  return "";
+}
+
+function parseLines(txt){
+  return String(txt||"").split("\n").map(s=>s.trim()).filter(Boolean);
+}
+
+// ---- State ----
+const state = {
+  version: 0,
+  compiled: false,
+  evidence: [],
+  tasks: [],
+  gates: [],
+  overall: { status:"—", score:null },
+  forwardable: "unknown",
+  lastCompiledPack: null,
+};
+
+function inputs(){
+  return {
+    problem: UI.txtProblem.value.trim(),
+    icp: UI.inpICP.value.trim(),
+    hooks: parseLines(UI.txtHooks.value),
+    traction: UI.selTraction.value,
+    ip: UI.selIP.value,
+    disclosure: UI.selDisclosure.value,
+    evidencePct: Number(UI.rngEvidence.value),
+    riskRegisterPresent: true
+  };
+}
+
+// ---- Gate definitions ----
+// Each gate returns: {id, name, desc, status, score, max, reasons[], tasks[]}
+function gateProblemClarity(inp){
+  const reasons = [];
+  let score = 0;
+
+  if(inp.problem.length >= 40) score += 20; else reasons.push("Problem statement too vague/short (need who + pain + frequency/cost).");
+  if(inp.icp.length >= 8) score += 10; else reasons.push("ICP missing or too generic (who buys).");
+  if(inp.problem.toLowerCase().includes("for ") || inp.problem.toLowerCase().includes("founder") || inp.problem.toLowerCase().includes("investor")) score += 5;
+
+  const max = 35;
+  const status = score >= 28 ? "PASS" : "FAIL";
+
+  const tasks = [];
+  if(status === "FAIL"){
+    tasks.push(task("Write a 2-sentence problem (who + pain + why now)", "blocker", "receipt", "Problem statement receipt (mock)", {linkedTo:["Problem"]}));
+    tasks.push(task("Define ICP buyer + decision context (who forwards internally)", "normal", "receipt", "ICP clarity note (mock)", {linkedTo:["ICP"]}));
+  }
+
+  return { id:"G1", name:"Gate 1 — Problem Clarity", desc:"Is the problem & buyer specific enough to underwrite?", status, score, max, reasons, tasks };
+}
+
+function gateEvidenceCoverage(inp){
+  const reasons = [];
+  let score = 0;
+
+  if(inp.evidencePct >= 60) score += 35;
+  else if(inp.evidencePct >= 35) score += 22;
+  else if(inp.evidencePct >= 15) score += 12;
+  else reasons.push("Evidence coverage is very low — claims are not linked to receipts.");
+
+  // traction boosts
+  if(inp.traction === "strong") score += 10;
+  else if(inp.traction === "some") score += 5;
+  else reasons.push("No traction receipts selected.");
+
+  const max = 45;
+  const status = score >= 34 ? "PASS" : "FAIL";
+
+  const tasks = [];
+  if(status === "FAIL"){
+    tasks.push(task("Create an evidence plan: map 5 key claims → receipts", "blocker", "table", "Evidence map (mock)", {linkedTo:["EvidencePlan"]}));
+    tasks.push(task("Add at least 2 traction receipts (interviews, LOI, pilot)", "normal", "receipt", "Traction receipts (mock)", {linkedTo:["Traction"]}));
+  }
+
+  return { id:"G2", name:"Gate 2 — Evidence Coverage", desc:"Do claims link to receipts at sufficient coverage?", status, score, max, reasons, tasks };
+}
+
+function gateIPDelta(inp){
+  const reasons = [];
+  let score = 0;
+
+  if(inp.ip === "yes") score += 30;
+  else if(inp.ip === "partial"){ score += 18; reasons.push("IP delta is partial — action plan (file/publish/hold) not complete."); }
+  else reasons.push("No IP delta — adjacency & novelty deltas unknown.");
+
+  // Hooks help IP readiness
+  if(inp.hooks.length >= 3) score += 10;
+  else reasons.push("Claim hooks too thin to evaluate defensibility (need 3+).");
+
+  const max = 40;
+  const status = score >= 32 ? "PASS" : "FAIL";
+
+  const tasks = [];
+  if(status === "FAIL"){
+    tasks.push(task("Run Patent Intelligence: produce novelty delta + adjacency risk", "blocker", "ip_delta", "IP delta packet (mock)", {linkedTo:["IP"]}));
+    tasks.push(task("Record action plan (file/publish/hold) for top 2 hooks", "blocker", "ip_note", "IP action plan (mock)", {linkedTo:["IP.Action"]}));
+    tasks.push(task("Add 2 more claim hook candidates", "normal", "spec", "Claim hooks expansion (mock)", {linkedTo:["Hooks"]}));
+  }
+
+  return { id:"G3", name:"Gate 3 — IP Delta & Defensibility", desc:"Is differentiation defensible (delta + action plan)?", status, score, max, reasons, tasks };
+}
+
+function gateSafeDisclosure(inp){
+  const reasons = [];
+  let score = 0;
+
+  if(inp.disclosure === "yes") score += 25;
+  else if(inp.disclosure === "redactable"){ score += 16; reasons.push("Disclosure is redactable, but publish stub not prepared."); }
+  else reasons.push("No safe disclosure guardrails — risk of leaking secret sauce.");
+
+  // If IP is high and disclosure is low, penalize
+  if(inp.ip !== "no" && inp.disclosure === "no"){
+    reasons.push("IP work exists but disclosure controls are missing — high leakage risk.");
+    score = Math.max(0, score - 6);
+  }
+
+  const max = 25;
+  const status = score >= 19 ? "PASS" : "FAIL";
+
+  const tasks = [];
+  if(status === "FAIL"){
+    tasks.push(task("Create safe external update template (redacted)", "normal", "pub_stub", "Safe publish stub (mock)", {linkedTo:["Disclosure"]}));
+    tasks.push(task("Label sensitive sections: internal-only vs shareable", "normal", "trace", "Disclosure classification log (mock)", {linkedTo:["Disclosure.Classification"]}));
+  }
+
+  return { id:"G4", name:"Gate 4 — Safe Disclosure", desc:"Can the artifact be shared without leaking sensitive details?", status, score, max, reasons, tasks };
+}
+
+function gateForwardability(inp, gateResults){
+  const reasons = [];
+  let score = 0;
+
+  const fails = gateResults.filter(g => g.status === "FAIL").length;
+  if(fails === 0) score += 20;
+  else reasons.push(`${fails} gate(s) failing — not forwardable yet.`);
+
+  // Blockers open
+  const openBlockers = state.tasks.filter(t => t.severity === "blocker" && !t.done).length;
+  if(openBlockers === 0) score += 20;
+  else reasons.push(`${openBlockers} blocker task(s) still open.`);
+
+  const max = 40;
+  const status = (fails === 0 && openBlockers === 0) ? "PASS" : "FAIL";
+
+  const tasks = [];
+  if(status === "FAIL"){
+    tasks.push(task("Close blockers and re-run gates until PASS", "blocker", "trace", "Gate re-run log (mock)", {linkedTo:["Gates"]}));
+  }
+
+  return { id:"G5", name:"Gate 5 — Forwardability", desc:"Is this safe and complete enough to forward internally?", status, score, max, reasons, tasks };
+}
+
+// ---- Tasks & evidence ----
+function task(title, severity, evidenceType, evidenceTitle, payload){
+  return {
+    id: uid("T"),
+    title,
+    severity, // blocker | normal
+    done: false,
+    producesEvidence: { type: evidenceType, title: evidenceTitle, payload: payload || {} }
+  };
+}
+
+function addTasks(newTasks){
+  const existingTitles = new Set(state.tasks.map(t => t.title));
+  for(const t of newTasks){
+    if(!existingTitles.has(t.title)){
+      state.tasks.push(t);
+      existingTitles.add(t.title);
+    }
+  }
+}
+
+function markTaskDone(taskId){
+  const t = state.tasks.find(x => x.id === taskId);
+  if(!t || t.done) return;
+
+  log.group("WorkflowOS.markTaskDone()");
+  log.debug("task", t);
+  t.done = true;
+
+  const ev = {
+    id: uid("EV"),
+    type: t.producesEvidence?.type || "trace",
+    title: t.producesEvidence?.title || `Task completed: ${t.title}`,
+    payload: t.producesEvidence?.payload || {},
+    ts: nowIso()
+  };
+  state.evidence.push(ev);
+  log.info("Produced evidence", ev);
+  log.groupEnd();
+
+  // Completing certain tasks can update inputs (simulate reality)
+  if(t.title.toLowerCase().includes("claim hook")){
+    const hooks = parseLines(UI.txtHooks.value);
+    if(hooks.length < 3){
+      UI.txtHooks.value = hooks.concat([
+        "Compiler that keeps pack forwardable via gates + delta routing",
+        "Evidence-index linkage: claims → receipts → confidence"
+      ]).join("\n");
+    }
+  }
+  if(t.producesEvidence?.type === "ip_delta"){
+    UI.selIP.value = "partial";
+  }
+  if(t.producesEvidence?.type === "ip_note"){
+    UI.selIP.value = "yes";
+  }
+  if(t.producesEvidence?.type === "pub_stub"){
+    UI.selDisclosure.value = "yes";
+  }
+  if(t.producesEvidence?.type === "table"){
+    UI.rngEvidence.value = String(Math.min(100, Number(UI.rngEvidence.value) + 35));
+    UI.evPct.textContent = UI.rngEvidence.value;
+  }
+  if(t.producesEvidence?.type === "receipt" && t.title.toLowerCase().includes("traction")){
+    UI.selTraction.value = "some";
+  }
+
+  renderAll();
+}
+
+// expose
+window.markTaskDone = markTaskDone;
+
+// ---- Run gates ----
+function runAllGates(){
+  const inp = inputs();
+  log.group("Gates.runAll()");
+  log.debug("inputs", inp);
+
+  const g1 = gateProblemClarity(inp);
+  const g2 = gateEvidenceCoverage(inp);
+  const g3 = gateIPDelta(inp);
+  const g4 = gateSafeDisclosure(inp);
+
+  const prelim = [g1,g2,g3,g4];
+  const g5 = gateForwardability(inp, prelim);
+
+  const all = prelim.concat([g5]);
+
+  // Add remediation tasks from failed gates (and from forwardability gate)
+  const tasks = all.flatMap(g => g.tasks || []);
+  addTasks(tasks);
+
+  // Score
+  const totalScore = all.reduce((a,g)=>a+g.score,0);
+  const totalMax = all.reduce((a,g)=>a+g.max,0);
+  const pct = Math.round(100 * (totalScore / totalMax));
+
+  const fails = all.filter(g => g.status === "FAIL").length;
+  const overallStatus = (fails === 0) ? "PASS" : "FAIL";
+
+  state.gates = all;
+  state.overall = { status: overallStatus, score: pct };
+  state.forwardable = (overallStatus === "PASS");
+
+  log.info("Gate results", { overallStatus, pct, fails, totalScore, totalMax });
+  log.debug(all);
+  log.groupEnd();
+
+  renderAll();
+}
+
+// ---- Compile (Pitch Debugger) ----
+function compilePack(){
+  log.group(`PitchDebugger.compile() v${state.version}`);
+  const inp = inputs();
+
+  const openBlockers = state.tasks.filter(t => t.severity === "blocker" && !t.done).length;
+  const gatesFail = state.gates.filter(g => g.status === "FAIL").length;
+
+  const pack = {
+    meta: { id: uid("DP"), version: state.version, compiledAt: nowIso(), title:"Decision Pack — Underwritable Gates (Demo)" },
+    narrative: { problem: inp.problem || "(missing)", icp: inp.icp || "(missing)" },
+    hooks: inp.hooks,
+    underwriting: {
+      gates: state.gates.map(g => ({ id:g.id, name:g.name, status:g.status, score:g.score, max:g.max })),
+      overall: state.overall,
+      openBlockers,
+      gatesFail
+    },
+    evidenceIndex: state.evidence.map(e => ({ id:e.id, type:e.type, title:e.title, ts:e.ts })),
+    tasks: state.tasks.map(t => ({ title:t.title, severity:t.severity, done:t.done })),
+  };
+
+  log.debug("compiled pack", pack);
+  log.groupEnd();
+
+  state.lastCompiledPack = pack;
+  state.compiled = true;
+  return pack;
+}
+
+// ---- Autofix ----
+function autofix(){
+  // Mark up to 2 open tasks (prefer blockers) as done
+  const open = state.tasks.filter(t => !t.done);
+  const blockers = open.filter(t => t.severity === "blocker");
+  const pick = blockers.slice(0,2).concat(open.filter(t=>t.severity!=="blocker").slice(0, Math.max(0,2-blockers.slice(0,2).length)));
+
+  if(pick.length === 0){
+    log.info("Autofix: nothing to do.");
+    return;
+  }
+  log.info("Autofix completing", pick.map(t=>t.title));
+  pick.forEach(t => markTaskDone(t.id));
+}
+
+// ---- Render ----
+function renderTop(){
+  setPill(UI.versionPill, `<b class="mono">v${state.version}</b> • ${state.compiled ? "compiled" : "not compiled"}`);
+  const overallTone = state.overall.status === "PASS" ? "good" : (state.overall.status === "FAIL" ? "bad" : "");
+  setPill(UI.overallPill, `Overall: <b>${state.overall.status}</b>`, overallTone);
+
+  if(state.overall.score != null) setPill(UI.scorePill, `Score: <b>${state.overall.score}%</b>`, state.overall.score >= 80 ? "good" : "warn");
+  else setPill(UI.scorePill, `Score: <b>—</b>`);
+
+  const f = state.forwardable === true ? ["yes","good"] : (state.forwardable === false ? ["not yet","warn"] : ["unknown",""]);
+  setPill(UI.forwardPill, `Forwardable: <b>${f[0]}</b>`, f[1]);
+
+  UI.taskCount.textContent = String(state.tasks.length);
+  UI.evCount.textContent = String(state.evidence.length);
+  const openBlockers = state.tasks.filter(t => t.severity === "blocker" && !t.done).length;
+  UI.blockerCount.textContent = String(openBlockers);
+
+  const pass = state.gates.filter(g => g.status === "PASS").length;
+  const fail = state.gates.filter(g => g.status === "FAIL").length;
+  UI.passCount.textContent = String(pass);
+  UI.failCount.textContent = String(fail);
+  setPill(UI.passCountPill, `PASS: <b>${pass}</b>`, pass ? "good" : "");
+  setPill(UI.failCountPill, `FAIL: <b>${fail}</b>`, fail ? "bad" : "");
+
+  UI.evPct.textContent = UI.rngEvidence.value;
+}
+
+function renderTasks(){
+  if(state.tasks.length === 0){
+    setPill(UI.tasksPill, `Generated by gates`);
+    UI.tasksView.innerHTML = `<div class="muted">Run gates to generate tasks.</div>`;
+    return;
+  }
+
+  const open = state.tasks.filter(t => !t.done).length;
+  setPill(UI.tasksPill, `Generated by gates • open <b>${open}</b>`, open ? "warn" : "good");
+
+  UI.tasksView.innerHTML = state.tasks.map(t => {
+    const tone = t.done ? "good" : (t.severity === "blocker" ? "bad" : "warn");
+    const sev = t.severity === "blocker" ? `<span class="pill bad">blocker</span>` : `<span class="pill warn">task</span>`;
+    const done = t.done ? `<span class="pill good">done</span>` : `<span class="pill">open</span>`;
+    return `
+      <div class="item ${tone}">
+        <div class="row" style="justify-content:space-between; align-items:flex-start;">
+          <div style="min-width:220px; flex:1;">
+            <b>${escapeHtml(t.title)}</b>
+            <div class="tiny muted" style="margin-top:4px;">Produces evidence: <span class="mono">${escapeHtml(t.producesEvidence?.type||"—")}</span></div>
+          </div>
+          <div class="row">${sev} ${done}</div>
+        </div>
+        <div class="row" style="margin-top:8px;">
+          <button ${t.done ? "disabled" : ""} onclick="markTaskDone('${t.id}')">Mark done</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderEvidence(){
+  UI.txtEvidence.value = JSON.stringify(state.evidence, null, 2);
+}
+
+function renderGates(){
+  if(state.gates.length === 0){
+    UI.gatesView.innerHTML = `<div class="muted">Run All Gates to see rubric checkpoints.</div>`;
+    return;
+  }
+
+  UI.gatesView.innerHTML = state.gates.map(g => {
+    const tone = toneFromGate(g);
+    const pct = Math.round(100 * (g.score / g.max));
+    const reasons = g.reasons?.length ? `<ul class="checklist">${g.reasons.map(r => `<li><span class="no">✕</span> ${escapeHtml(r)}</li>`).join("")}</ul>` : `<ul class="checklist"><li><span class="ok">✓</span> No issues flagged</li></ul>`;
+
+    return `
+      <div class="gate ${tone}">
+        <div class="top">
+          <div>
+            <div class="name">${escapeHtml(g.name)} <span class="badge">${escapeHtml(g.status)}</span></div>
+            <div class="desc">${escapeHtml(g.desc)}</div>
+          </div>
+          <div class="meta">
+            <span class="pill mono">score <b>${g.score}/${g.max}</b></span>
+            <span class="pill">${pct}%</span>
+          </div>
+        </div>
+        <div class="progress" style="margin-top:10px;"><div class="bar" style="width:${pct}%;"></div></div>
+        <div class="section" style="margin-top:10px;">
+          <h3><span>Reasons</span><span class="pill">${g.reasons.length} flags</span></h3>
+          ${reasons}
+        </div>
+        ${g.tasks?.length ? `
+          <div class="section">
+            <h3><span>Remediation tasks</span><span class="pill warn">${g.tasks.length} proposed</span></h3>
+            <ul class="list">${g.tasks.map(t => `<li>${escapeHtml(t.title)} <span class="badge">${escapeHtml(t.severity)}</span></li>`).join("")}</ul>
+          </div>` : ""}
+      </div>
+    `;
+  }).join("");
+}
+
+function renderPack(){
+  if(!state.lastCompiledPack){
+    UI.packView.innerHTML = `<div class="muted">Compile to generate the current “forwardable artifact” snapshot.</div>`;
+    return;
+  }
+  const p = state.lastCompiledPack;
+  const gatesFail = p.underwriting.gatesFail;
+  const openBlockers = p.underwriting.openBlockers;
+  const forwardable = (gatesFail === 0 && openBlockers === 0);
+
+  setPill(UI.forwardPill, `Forwardable: <b>${forwardable ? "yes" : "not yet"}</b>`, forwardable ? "good" : "warn");
+
+  const evHtml = p.evidenceIndex.length ? `<ul class="list">${p.evidenceIndex.slice().reverse().map(e => `<li><span class="mono">${escapeHtml(e.type)}</span> — ${escapeHtml(e.title)} <span class="badge">${escapeHtml(e.ts)}</span></li>`).join("")}</ul>` : `<div class="muted">No evidence yet.</div>`;
+  const tasksOpen = p.tasks.filter(t=>!t.done).length;
+
+  UI.packView.innerHTML = `
+    <div class="section">
+      <h3><span>Meta</span><span class="pill mono">v${p.meta.version}</span></h3>
+      <div class="kv"><div class="k">Compiled</div><div class="v mono">${escapeHtml(p.meta.compiledAt)}</div></div>
+      <div class="kv"><div class="k">Forwardability</div><div class="v">${forwardable ? "PASS" : "FAIL"} • gatesFail ${gatesFail} • blockers ${openBlockers} • open tasks ${tasksOpen}</div></div>
+    </div>
+
+    <div class="section">
+      <h3><span>Narrative</span><span class="pill">problem+ICP</span></h3>
+      <div class="kv"><div class="k">Problem</div><div class="v">${escapeHtml(p.narrative.problem)}</div></div>
+      <div class="kv"><div class="k">ICP</div><div class="v">${escapeHtml(p.narrative.icp)}</div></div>
+    </div>
+
+    <div class="section">
+      <h3><span>Hooks</span><span class="pill">${p.hooks.length}</span></h3>
+      ${p.hooks.length ? `<ul class="list">${p.hooks.map(h => `<li>${escapeHtml(h)}</li>`).join("")}</ul>` : `<div class="muted">No hooks.</div>`}
+    </div>
+
+    <div class="section">
+      <h3><span>Gate Summary</span><span class="pill">${p.underwriting.overall.status}</span></h3>
+      <ul class="list">${p.underwriting.gates.map(g => `<li><b>${escapeHtml(g.name)}</b>: ${escapeHtml(g.status)} <span class="badge">${g.score}/${g.max}</span></li>`).join("")}</ul>
+    </div>
+
+    <div class="section">
+      <h3><span>Evidence Index</span><span class="pill">${p.evidenceIndex.length} items</span></h3>
+      ${evHtml}
+    </div>
+  `;
+}
+
+function renderAll(){
+  renderTop();
+  renderTasks();
+  renderEvidence();
+  renderGates();
+  renderPack();
+}
+
+// ---- UI actions ----
+function seedDecent(){
+  UI.txtProblem.value = "Pre-seed founders can sound credible with AI-generated decks, but investors can’t underwrite what’s real. They need a forwardable decision pack linking claims to receipts and explicit risks.";
+  UI.inpICP.value = "Pre-seed founders + angels + early-stage investors";
+  UI.txtHooks.value = [
+    "Rubric-gated decision pack that links claims → receipts → confidence",
+    "Compiler that regenerates a standardized underwriting artifact as diligence deepens",
+    "Change-controlled deltas that keep the pack forwardable without leaking sensitive details"
+  ].join("\n");
+  UI.selTraction.value = "some";
+  UI.selIP.value = "partial";
+  UI.selDisclosure.value = "redactable";
+  UI.rngEvidence.value = "45";
+  UI.evPct.textContent = UI.rngEvidence.value;
+}
+
+function makeThin(){
+  UI.txtProblem.value = "We help founders pitch better.";
+  UI.inpICP.value = "Everyone";
+  UI.txtHooks.value = "AI deck help";
+  UI.selTraction.value = "none";
+  UI.selIP.value = "no";
+  UI.selDisclosure.value = "no";
+  UI.rngEvidence.value = "10";
+  UI.evPct.textContent = UI.rngEvidence.value;
+}
+
+function clearInputs(){
+  UI.txtProblem.value = "";
+  UI.inpICP.value = "";
+  UI.txtHooks.value = "";
+  UI.selTraction.value = "none";
+  UI.selIP.value = "no";
+  UI.selDisclosure.value = "no";
+  UI.rngEvidence.value = "0";
+  UI.evPct.textContent = UI.rngEvidence.value;
+}
+
+function compile(){
+  if(state.compiled) state.version += 1;
+  state.compiled = true;
+  // If gates have not been run, run once so compile has latest
+  if(state.gates.length === 0) runAllGates();
+  state.lastCompiledPack = compilePack();
+  state.forwardable = (state.gates.filter(g=>g.status==="FAIL").length === 0) && (state.tasks.filter(t=>t.severity==="blocker" && !t.done).length === 0);
+  renderAll();
+}
+
+function reset(){
+  log.info("Reset demo");
+  state.version = 0;
+  state.compiled = false;
+  state.evidence = [];
+  state.tasks = [];
+  state.gates = [];
+  state.overall = { status:"—", score:null };
+  state.forwardable = "unknown";
+  state.lastCompiledPack = null;
+  makeThin();
+  renderAll();
+}
+
+// Wire
+UI.rngEvidence.addEventListener("input", () => { UI.evPct.textContent = UI.rngEvidence.value; renderTop(); });
+
+UI.btnSeed.addEventListener("click", seedDecent);
+UI.btnMakeWorse.addEventListener("click", makeThin);
+UI.btnClearInputs.addEventListener("click", clearInputs);
+
+UI.btnRunAll.addEventListener("click", runAllGates);
+UI.btnCompile.addEventListener("click", compile);
+UI.btnAutofix.addEventListener("click", autofix);
+UI.btnReset.addEventListener("click", reset);
+
+// Boot
+reset();
+</script>
+</body>
+</html>

@@ -1,0 +1,1099 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Flow 6 Demo — Two-Track Output (Investor Pack vs Attorney Pack)</title>
+  <style>
+    :root{
+      --bg:#0b1020; --panel:#0f1733; --panel2:#0c1430; --border:#243058;
+      --text:#e8ecff; --muted:#a9b4e6; --good:#38d39f; --warn:#ffd166; --bad:#ff6b6b; --accent:#7aa2ff;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:var(--sans); color:var(--text);
+      background:linear-gradient(180deg,#070b17 0%, #0b1020 45%, #060916 100%);
+    }
+    header{
+      padding:16px 20px; border-bottom:1px solid var(--border);
+      background:rgba(15,23,51,0.65); backdrop-filter: blur(8px);
+      position:sticky; top:0; z-index:5;
+      display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+    }
+    header h1{ margin:0; font-size:16px; letter-spacing:0.2px;}
+    header .sub{ color:var(--muted); font-size:12px; max-width:980px;}
+    .wrap{ padding:16px 20px 24px; max-width:1520px; margin:0 auto;}
+    .grid{ display:grid; grid-template-columns: 1.05fr 0.95fr; gap:14px; }
+    @media (max-width: 980px){ .grid{ grid-template-columns: 1fr; } }
+    .card{
+      border:1px solid var(--border); border-radius:14px; background:rgba(15,23,51,0.55);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.25); overflow:hidden;
+    }
+    .card .hd{
+      padding:12px 14px; border-bottom:1px solid var(--border);
+      display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+      background:linear-gradient(180deg, rgba(122,162,255,0.08), rgba(15,23,51,0.0));
+    }
+    .card .hd .title{ font-weight:950; font-size:13px; }
+    .card .hd .hint{ color:var(--muted); font-size:12px; }
+    .card .bd{ padding:12px 14px; }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    button{
+      border:1px solid var(--border); background:#101a3a; color:var(--text);
+      padding:9px 10px; border-radius:10px; cursor:pointer; font-weight:800; font-size:12px;
+    }
+    button:hover{ border-color:#32407a; background:#0f1a3f; }
+    button.primary{ border-color: rgba(122,162,255,0.7); box-shadow:0 0 0 2px rgba(122,162,255,0.12) inset; }
+    button.danger{ border-color: rgba(255,107,107,0.75); }
+    button:disabled{ opacity:0.55; cursor:not-allowed; }
+
+    textarea, input, select{
+      width:100%; border-radius:12px; border:1px solid var(--border);
+      background:rgba(12,20,48,0.75); color:var(--text);
+      padding:10px 10px; font-size:12px; outline:none;
+    }
+    textarea{ min-height:92px; resize:vertical; font-family:var(--mono); line-height:1.35; }
+
+    .pill{
+      display:inline-flex; align-items:center; gap:6px;
+      padding:4px 8px; border-radius:999px;
+      border:1px solid var(--border); background:rgba(12,20,48,0.8);
+      font-size:11px; color:var(--muted);
+    }
+    .pill b{ color:var(--text); font-weight:950; }
+    .pill.good{ border-color: rgba(56,211,159,0.5); }
+    .pill.warn{ border-color: rgba(255,209,102,0.6); }
+    .pill.bad{ border-color: rgba(255,107,107,0.55); }
+    .mono{ font-family:var(--mono); }
+    .muted{ color:var(--muted); }
+    .tiny{ font-size:11px; color:var(--muted); }
+
+    .section{
+      border:1px solid rgba(36,48,88,0.75); background:rgba(12,20,48,0.45);
+      border-radius:12px; padding:10px; margin:10px 0;
+    }
+    .section h3{ margin:0 0 6px; font-size:12px; display:flex; align-items:center; justify-content:space-between; gap:10px;}
+    .two{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+    @media (max-width: 860px){ .two{ grid-template-columns:1fr; } }
+
+    .item{
+      border:1px solid var(--border); background:rgba(12,20,48,0.55);
+      border-radius:12px; padding:10px; margin:8px 0;
+    }
+    .item.good{ border-color: rgba(56,211,159,0.45); }
+    .item.warn{ border-color: rgba(255,209,102,0.55); }
+    .item.bad{ border-color: rgba(255,107,107,0.55); }
+
+    .list{ margin:6px 0 0; padding-left:16px; }
+    .list li{ margin:4px 0; font-size:12px; }
+    .kv{ display:grid; grid-template-columns: 160px 1fr; gap:8px; margin:4px 0; }
+    .kv .k{ color:var(--muted); font-size:11px; }
+    .kv .v{ font-size:12px; }
+
+    .tabs{ display:flex; gap:8px; flex-wrap:wrap; }
+    .tab{
+      border:1px solid var(--border); border-radius:999px; padding:6px 10px;
+      font-size:12px; cursor:pointer; user-select:none;
+      background:rgba(12,20,48,0.65); color:var(--muted); font-weight:900;
+    }
+    .tab.active{
+      border-color: rgba(122,162,255,0.7);
+      box-shadow:0 0 0 2px rgba(122,162,255,0.12) inset;
+      color:var(--text);
+      background:#101a3a;
+    }
+    .rightcol{ display:grid; grid-template-rows:auto 1fr auto; gap:14px;}
+
+    .warnbox{
+      border:1px dashed rgba(255,209,102,0.6);
+      background:rgba(255,209,102,0.08);
+      padding:10px; border-radius:12px; font-size:12px; color:var(--muted);
+    }
+    .badge{
+      display:inline-block; font-size:10px; padding:2px 6px; border-radius:8px;
+      border:1px dashed rgba(255,209,102,0.7); color:var(--warn); vertical-align:middle;
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Flow 6 Demo: Two-Track Output — Investor Pack vs Attorney Pack</h1>
+    <div class="sub">
+      This demo compiles one canonical Decision Pack into two different “views”: an <b>Investor Pack</b> (forwardable, high-level, safe disclosure)
+      and an <b>Attorney Pack</b> (claim hooks, novelty deltas, design-around notes, and drafting inputs). Open DevTools → Console for trace logs.
+    </div>
+  </div>
+  <div class="row">
+    <span class="pill mono" id="versionPill"><b>v0</b> • not compiled</span>
+    <span class="pill" id="gatePill">Gate: <b>—</b></span>
+    <span class="pill mono" id="scorePill">Score: <b>—</b></span>
+    <span class="pill" id="forwardPill">Forwardable: <b>unknown</b></span>
+    <button class="primary" id="btnCompile">Compile Two-Track Packs</button>
+    <button id="btnRunGates">Run Underwritable Gates</button>
+    <button id="btnAutofix">Autofix tasks</button>
+    <button class="danger" id="btnReset">Reset</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="grid">
+    <!-- LEFT: Canonical inputs + privacy controls + tasks/evidence -->
+    <div class="card">
+      <div class="hd">
+        <div>
+          <div class="title">Canonical Decision Pack (single source of truth)</div>
+          <div class="hint">Edit the canonical facts; compiler produces two outputs with different disclosure policies.</div>
+        </div>
+        <div class="row">
+          <span class="pill">Tasks: <b id="taskCount">0</b></span>
+          <span class="pill">Evidence: <b id="evCount">0</b></span>
+          <span class="pill">Sensitive items: <b id="sensitiveCount">0</b></span>
+        </div>
+      </div>
+      <div class="bd">
+        <div class="section">
+          <h3><span>Core narrative</span><span class="badge">shared</span></h3>
+          <div class="tiny">Problem statement</div>
+          <textarea id="txtProblem" placeholder="Who has what painful problem? Why now?"></textarea>
+          <div class="two" style="margin-top:10px;">
+            <div>
+              <div class="tiny">ICP (buyer)</div>
+              <input id="inpICP" placeholder="e.g., Pre-seed founders + angels + early-stage investors" />
+            </div>
+            <div>
+              <div class="tiny">Stage</div>
+              <select id="selStage">
+                <option value="idea">Idea</option>
+                <option value="mvp" selected>MVP</option>
+                <option value="pilot">Pilot</option>
+                <option value="paid">Paid</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3><span>Secret sauce hypotheses</span><span class="badge">mix</span></h3>
+          <div class="tiny muted">Mark lines as [SENSITIVE] to hide from Investor Pack but keep in Attorney Pack.</div>
+          <textarea id="txtSecretSauce" placeholder="One per line. Prefix with [SENSITIVE] for attorney-only details."></textarea>
+        </div>
+
+        <div class="section">
+          <h3><span>IP layer (Patent Intelligence outputs)</span><span class="badge">attorney-heavy</span></h3>
+          <div class="two">
+            <div>
+              <div class="tiny">Claim hooks (one per line)</div>
+              <textarea id="txtHooks" placeholder="e.g., rubric-gated compilation of decision pack with evidence index linkage"></textarea>
+            </div>
+            <div>
+              <div class="tiny">Novelty delta notes (can include [SENSITIVE])</div>
+              <textarea id="txtNovelty" placeholder="e.g., [SENSITIVE] delta: routing material changes into recompilable evidence tasks + safe disclosure view"></textarea>
+            </div>
+          </div>
+          <div class="two" style="margin-top:10px;">
+            <div>
+              <div class="tiny">Design-around risks</div>
+              <textarea id="txtDesignAround" placeholder="How could a competitor copy? What variants block design-arounds?"></textarea>
+            </div>
+            <div>
+              <div class="tiny">Disclosure policy</div>
+              <select id="selDisclosure">
+                <option value="strict" selected>Strict (investor pack hides sensitive)</option>
+                <option value="balanced">Balanced (investor pack shows redacted summaries)</option>
+                <option value="open">Open (investor pack includes most details)</option>
+              </select>
+              <div class="warnbox" style="margin-top:10px;">
+                <b>Demo note:</b> Investor Pack is intended to be forwardable (safe). Attorney Pack is internal / privileged (deep).
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3><span>Task Board</span><span class="pill" id="tasksPill">Generated by gates</span></h3>
+          <div id="tasksView" class="muted">Run gates to generate tasks.</div>
+        </div>
+
+        <div class="section">
+          <h3><span>Evidence Vault</span><span class="pill mono"><b>JSON</b></span></h3>
+          <textarea id="txtEvidence" readonly></textarea>
+        </div>
+
+        <div class="row">
+          <button class="primary" id="btnSeed">Seed realistic canonical data</button>
+          <button id="btnMakeSensitive">Add sensitive lines</button>
+          <button id="btnClear">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: two-track output -->
+    <div class="rightcol">
+      <div class="card">
+        <div class="hd">
+          <div>
+            <div class="title">Two-track output</div>
+            <div class="hint">Same canonical pack → two different views. Toggle tabs to compare.</div>
+          </div>
+          <div class="tabs">
+            <div class="tab active" id="tabInvestor">Investor Pack</div>
+            <div class="tab" id="tabAttorney">Attorney Pack</div>
+          </div>
+        </div>
+        <div class="bd" id="outputView">
+          <div class="muted">Compile to generate Investor + Attorney outputs.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd">
+          <div>
+            <div class="title">Diff: what changed between the two tracks</div>
+            <div class="hint">Shows what’s withheld/redacted from Investor Pack based on disclosure rules.</div>
+          </div>
+          <div class="row">
+            <span class="pill" id="diffPill">Diff: <b>—</b></span>
+          </div>
+        </div>
+        <div class="bd" id="diffView">
+          <div class="muted">Compile to see the diff.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd">
+          <div>
+            <div class="title">Recommended demo clicks</div>
+            <div class="hint">Short script to show the two-track compiler behavior.</div>
+          </div>
+        </div>
+        <div class="bd">
+          <ol class="list">
+            <li>Click <b>Seed realistic canonical data</b></li>
+            <li>Click <b>Add sensitive lines</b> (mark attorney-only)</li>
+            <li>Click <b>Run Underwritable Gates</b> (tasks appear)</li>
+            <li>Click <b>Autofix tasks</b> (evidence grows)</li>
+            <li>Click <b>Compile Two-Track Packs</b></li>
+            <li>Toggle <b>Investor Pack</b> vs <b>Attorney Pack</b> tabs</li>
+            <li>Show <b>Diff</b> (what is withheld/redacted)</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/**
+ * Flow 6 Demo:
+ * Two-track compiler output:
+ * - Investor Pack: forwardable, safe disclosure
+ * - Attorney Pack: deep IP drafting inputs
+ * Uses canonical pack as single source of truth.
+ */
+
+const log = {
+  info: (...a) => console.info("[flow6]", ...a),
+  debug: (...a) => console.debug("[flow6]", ...a),
+  warn: (...a) => console.warn("[flow6]", ...a),
+  group: (label) => console.group(label),
+  groupEnd: () => console.groupEnd(),
+};
+const uid = (p) => `${p}_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`;
+const nowIso = () => new Date().toISOString();
+const escapeHtml = (str) => String(str ?? "")
+  .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+  .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+
+const el = (id) => document.getElementById(id);
+const UI = {
+  versionPill: el("versionPill"),
+  gatePill: el("gatePill"),
+  scorePill: el("scorePill"),
+  forwardPill: el("forwardPill"),
+
+  txtProblem: el("txtProblem"),
+  inpICP: el("inpICP"),
+  selStage: el("selStage"),
+  txtSecretSauce: el("txtSecretSauce"),
+  txtHooks: el("txtHooks"),
+  txtNovelty: el("txtNovelty"),
+  txtDesignAround: el("txtDesignAround"),
+  selDisclosure: el("selDisclosure"),
+
+  btnCompile: el("btnCompile"),
+  btnRunGates: el("btnRunGates"),
+  btnAutofix: el("btnAutofix"),
+  btnReset: el("btnReset"),
+
+  btnSeed: el("btnSeed"),
+  btnMakeSensitive: el("btnMakeSensitive"),
+  btnClear: el("btnClear"),
+
+  taskCount: el("taskCount"),
+  evCount: el("evCount"),
+  sensitiveCount: el("sensitiveCount"),
+  tasksPill: el("tasksPill"),
+  tasksView: el("tasksView"),
+  txtEvidence: el("txtEvidence"),
+
+  tabInvestor: el("tabInvestor"),
+  tabAttorney: el("tabAttorney"),
+  outputView: el("outputView"),
+
+  diffPill: el("diffPill"),
+  diffView: el("diffView"),
+};
+
+function setPill(pillEl, html, tone){
+  pillEl.classList.remove("good","warn","bad");
+  if(tone) pillEl.classList.add(tone);
+  pillEl.innerHTML = html;
+}
+
+function parseLines(txt){
+  return String(txt||"").split("\n").map(s=>s.trim()).filter(Boolean);
+}
+
+function isSensitiveLine(line){
+  return /^\[SENSITIVE\]\s*/i.test(line);
+}
+
+function stripSensitiveTag(line){
+  return line.replace(/^\[SENSITIVE\]\s*/i, "");
+}
+
+function redact(line){
+  // simple redaction: keep first ~10 words
+  const words = stripSensitiveTag(line).split(/\s+/).filter(Boolean);
+  const head = words.slice(0, 10).join(" ");
+  return head + (words.length > 10 ? " …[redacted]" : " [redacted]");
+}
+
+// ---- State ----
+const state = {
+  version: 0,
+  compiled: false,
+  tasks: [],
+  evidence: [],
+  gates: { gate:"—", score:null, forwardable:"unknown", reasons:[] },
+  canonical: null,
+  investorPack: null,
+  attorneyPack: null,
+  diff: null,
+  activeTab: "investor",
+};
+
+// ---- Canonical pack ----
+function canonicalPack(){
+  const secret = parseLines(UI.txtSecretSauce.value);
+  const hooks = parseLines(UI.txtHooks.value);
+  const novelty = parseLines(UI.txtNovelty.value);
+  const designAround = parseLines(UI.txtDesignAround.value);
+
+  const sensitiveLines = [...secret, ...novelty].filter(isSensitiveLine).length;
+
+  return {
+    meta: { id: uid("CANON"), updatedAt: nowIso() },
+    narrative: {
+      problem: UI.txtProblem.value.trim(),
+      icp: UI.inpICP.value.trim(),
+      stage: UI.selStage.value
+    },
+    secretSauce: secret,
+    ip: {
+      claimHooks: hooks,
+      noveltyDeltas: novelty,
+      designAround: designAround
+    },
+    policy: { disclosure: UI.selDisclosure.value },
+    sensitiveLines
+  };
+}
+
+// ---- Gates (lightweight) ----
+function runGates(){
+  const c = canonicalPack();
+  log.group("Gates.run()");
+  log.debug("canonical", c);
+
+  const reasons = [];
+  let score = 0;
+
+  if(c.narrative.problem.length >= 50) score += 25; else reasons.push("Problem statement too thin (need who + pain + stakes).");
+  if(c.narrative.icp.length >= 8) score += 10; else reasons.push("ICP too generic.");
+  if(c.secretSauce.length >= 3) score += 15; else reasons.push("Secret sauce hypotheses too few (need 3+).");
+  if(c.ip.claimHooks.length >= 2) score += 15; else reasons.push("Claim hooks missing/too few (need 2+).");
+  if(c.ip.noveltyDeltas.length >= 1) score += 10; else reasons.push("Novelty delta notes missing (need at least 1).");
+
+  // disclosure should be strict/balanced/open — but if strict and everything is sensitive, investor pack may be empty
+  const nonSensitiveSecret = c.secretSauce.filter(l => !isSensitiveLine(l)).length;
+  if(c.policy.disclosure === "strict" && nonSensitiveSecret === 0){
+    reasons.push("Disclosure strict but all secret sauce lines are sensitive; Investor Pack will be over-redacted.");
+    score = Math.max(0, score - 10);
+  } else {
+    score += 10;
+  }
+
+  const gate = score >= 65 ? "PASS" : "FAIL";
+  const forwardable = (gate === "PASS");
+  const out = { gate, score, forwardable, reasons };
+
+  log.info("gate result", out);
+  log.groupEnd();
+
+  state.gates = out;
+
+  // tasks if fail
+  if(gate === "FAIL"){
+    addTasks([
+      task("Rewrite problem into 2 sentences (who + pain + why now)", "blocker", "receipt", "Problem rewrite receipt (mock)", {linkedTo:["Problem"]}),
+      task("Add 2 non-sensitive secret sauce hypotheses (investor-safe)", "blocker", "spec", "Investor-safe hypotheses (mock)", {linkedTo:["SecretSauce"]}),
+      task("Add 2 claim hooks and 1 novelty delta note", "blocker", "ip_note", "IP drafting inputs (mock)", {linkedTo:["IP"]}),
+      task("Prepare investor-safe summary for any sensitive line (redaction)", "normal", "pub_stub", "Investor-safe summary (mock)", {linkedTo:["Disclosure"]})
+    ]);
+  }
+
+  renderAll();
+}
+
+// ---- Tasks/evidence ----
+function task(title, severity, evidenceType, evidenceTitle, payload){
+  return {
+    id: uid("T"),
+    title,
+    severity, // blocker|normal
+    done: false,
+    producesEvidence: { type:evidenceType, title:evidenceTitle, payload: payload||{} }
+  };
+}
+function addTasks(newTasks){
+  const existing = new Set(state.tasks.map(t => t.title));
+  for(const t of newTasks){
+    if(!existing.has(t.title)){
+      state.tasks.push(t);
+      existing.add(t.title);
+    }
+  }
+}
+function markTaskDone(taskId){
+  const t = state.tasks.find(x => x.id === taskId);
+  if(!t || t.done) return;
+
+  t.done = true;
+  const ev = {
+    id: uid("EV"),
+    type: t.producesEvidence.type,
+    title: t.producesEvidence.title,
+    payload: t.producesEvidence.payload,
+    ts: nowIso()
+  };
+  state.evidence.push(ev);
+  log.info("Produced evidence", ev);
+
+  // simulate that tasks improve canonical data
+  if(t.title.includes("Rewrite problem")){
+    if(UI.txtProblem.value.trim().length < 50){
+      UI.txtProblem.value = "Pre-seed founders can sound credible with AI-generated decks, but investors can’t underwrite what’s real. They need a forwardable Decision Pack that links claims to receipts and keeps risks explicit as diligence deepens.";
+    }
+  }
+  if(t.title.includes("Add 2 non-sensitive")){
+    const lines = parseLines(UI.txtSecretSauce.value);
+    const additions = [
+      "Rubric-gated gates that turn vague diligence into concrete evidence tasks",
+      "Two-track compiler: investor-safe view vs attorney-deep drafting view"
+    ];
+    const next = lines.concat(additions.filter(a => !lines.includes(a)));
+    UI.txtSecretSauce.value = next.join("\n");
+  }
+  if(t.title.includes("Add 2 claim hooks")){
+    const hooks = parseLines(UI.txtHooks.value);
+    const h2 = "A compiler that regenerates a standardized underwriting artifact with evidence index linkage";
+    const h3 = "Material-change delta routing that triggers tasks and safe disclosure summaries";
+    const nextHooks = hooks.concat([h2,h3].filter(h => !hooks.includes(h))).slice(0, 6);
+    UI.txtHooks.value = nextHooks.join("\n");
+
+    const novelty = parseLines(UI.txtNovelty.value);
+    const n1 = "[SENSITIVE] Novelty delta: gate-scored forwardability + evidence-index binding + redacted investor view";
+    const nextNovelty = novelty.concat([n1].filter(n => !novelty.includes(n))).slice(0, 6);
+    UI.txtNovelty.value = nextNovelty.join("\n");
+  }
+  if(t.title.includes("investor-safe summary")){
+    // convert one sensitive line into a non-sensitive summary line
+    const lines = parseLines(UI.txtSecretSauce.value);
+    const sensIdx = lines.findIndex(isSensitiveLine);
+    if(sensIdx >= 0){
+      const plain = stripSensitiveTag(lines[sensIdx]);
+      lines.splice(sensIdx+1, 0, `Investor-safe summary: ${redact(plain)}`);
+      UI.txtSecretSauce.value = lines.join("\n");
+    }
+  }
+
+  renderAll();
+}
+window.markTaskDone = markTaskDone;
+
+function autofix(){
+  // complete up to 2 open tasks (prefer blockers)
+  const open = state.tasks.filter(t => !t.done);
+  const blockers = open.filter(t => t.severity === "blocker");
+  const pick = blockers.slice(0,2).concat(open.filter(t=>t.severity!=="blocker").slice(0, Math.max(0,2-blockers.slice(0,2).length)));
+  if(pick.length === 0){ log.info("Autofix: nothing to do."); return; }
+  pick.forEach(t => markTaskDone(t.id));
+}
+
+// ---- Compiler: two-track output ----
+function compileTwoTrack(){
+  state.canonical = canonicalPack();
+
+  log.group(`Compiler.compileTwoTrack() v${state.version}`);
+  log.debug("canonical", state.canonical);
+
+  const policy = state.canonical.policy.disclosure;
+
+  // Investor pack: safe + forwardable
+  const invSecret = state.canonical.secretSauce.map(line => {
+    if(!isSensitiveLine(line)) return { text: line, mode:"as_is" };
+    if(policy === "open") return { text: stripSensitiveTag(line), mode:"as_is_open" };
+    if(policy === "balanced") return { text: redact(line), mode:"redacted" };
+    // strict
+    return { text: "— withheld (sensitive) —", mode:"withheld" };
+  });
+
+  const invNovelty = state.canonical.ip.noveltyDeltas.map(line => {
+    if(!isSensitiveLine(line)) return { text: line, mode:"as_is" };
+    if(policy === "open") return { text: stripSensitiveTag(line), mode:"as_is_open" };
+    if(policy === "balanced") return { text: redact(line), mode:"redacted" };
+    return { text: "— withheld (sensitive) —", mode:"withheld" };
+  });
+
+  const investorPack = {
+    meta: { id: uid("INV"), compiledAt: nowIso(), version: state.version, track:"investor" },
+    narrative: state.canonical.narrative,
+    whyNow: "AI makes decks credible; investors need underwritable artifacts, not polish.",
+    secretSauce: invSecret,
+    risks: [
+      "Evidence too thin → gates enforce receipts",
+      "Disclosure leakage → two-track compiler + redaction"
+    ],
+    gateSummary: state.gates,
+    evidenceIndex: state.evidence.map(e => ({ id:e.id, type:e.type, title:e.title, ts:e.ts })),
+    ask: "Pilot partners + design partners; 2–3 founders + 1 investor + 1 counsel"
+  };
+
+  // Attorney pack: deep drafting inputs (keep sensitive)
+  const attorneyPack = {
+    meta: { id: uid("ATTY"), compiledAt: nowIso(), version: state.version, track:"attorney" },
+    narrative: state.canonical.narrative,
+    secretSauce: state.canonical.secretSauce.map(l => ({ text: stripSensitiveTag(l), sensitive: isSensitiveLine(l) })),
+    ip: {
+      claimHooks: state.canonical.ip.claimHooks,
+      noveltyDeltas: state.canonical.ip.noveltyDeltas.map(l => ({ text: stripSensitiveTag(l), sensitive: isSensitiveLine(l) })),
+      designAround: state.canonical.ip.designAround
+    },
+    draftingInputs: {
+      "Priority hooks": state.canonical.ip.claimHooks.slice(0,2),
+      "Embodiments needed": [
+        "Two-track compilation pipeline + policy filter",
+        "Evidence index binding + rubric scoring",
+        "Material change delta routing + safe disclosure"
+      ],
+      "Claims to explore": [
+        "System configured to compile investor-safe pack and attorney pack from same canonical data store",
+        "Policy engine applying disclosure rules to sensitive fields",
+        "Audit log linking pack statements to evidence objects"
+      ]
+    },
+    evidenceIndex: state.evidence
+  };
+
+  // Diff: what was withheld/redacted
+  const diff = {
+    policy,
+    withheldSecret: invSecret.filter(x => x.mode === "withheld").length,
+    redactedSecret: invSecret.filter(x => x.mode === "redacted").length,
+    withheldNovelty: invNovelty.filter(x => x.mode === "withheld").length,
+    redactedNovelty: invNovelty.filter(x => x.mode === "redacted").length,
+    sensitiveLinesCanonical: state.canonical.sensitiveLines
+  };
+
+  state.investorPack = investorPack;
+  state.attorneyPack = attorneyPack;
+  state.diff = diff;
+
+  log.debug("investor", investorPack);
+  log.debug("attorney", attorneyPack);
+  log.debug("diff", diff);
+  log.groupEnd();
+
+  state.compiled = true;
+  renderAll();
+}
+
+// ---- Render ----
+function renderTop(){
+  setPill(UI.versionPill, `<b class="mono">v${state.version}</b> • ${state.compiled ? "compiled" : "not compiled"}`);
+  const gateTone = state.gates.gate === "PASS" ? "good" : (state.gates.gate === "FAIL" ? "bad" : "");
+  setPill(UI.gatePill, `Gate: <b>${state.gates.gate || "—"}</b>`, gateTone);
+
+  if(state.gates.score != null) setPill(UI.scorePill, `Score: <b>${state.gates.score}</b>`, state.gates.score >= 75 ? "good" : "warn");
+  else setPill(UI.scorePill, `Score: <b>—</b>`);
+
+  const f = state.gates.forwardable === true ? ["yes","good"] : (state.gates.forwardable === false ? ["not yet","warn"] : ["unknown",""]);
+  setPill(UI.forwardPill, `Forwardable: <b>${f[0]}</b>`, f[1]);
+
+  UI.taskCount.textContent = String(state.tasks.length);
+  UI.evCount.textContent = String(state.evidence.length);
+  UI.sensitiveCount.textContent = String(state.canonical?.sensitiveLines ?? canonicalPack().sensitiveLines);
+}
+
+function renderTasks(){
+  if(state.tasks.length === 0){
+    setPill(UI.tasksPill, `Generated by gates`);
+    UI.tasksView.innerHTML = `<div class="muted">Run gates to generate tasks.</div>`;
+    return;
+  }
+  const open = state.tasks.filter(t => !t.done).length;
+  setPill(UI.tasksPill, `Generated by gates • open <b>${open}</b>`, open ? "warn" : "good");
+
+  UI.tasksView.innerHTML = state.tasks.map(t => {
+    const tone = t.done ? "good" : (t.severity === "blocker" ? "bad" : "warn");
+    const sev = t.severity === "blocker" ? `<span class="pill bad">blocker</span>` : `<span class="pill warn">task</span>`;
+    const done = t.done ? `<span class="pill good">done</span>` : `<span class="pill">open</span>`;
+    return `
+      <div class="item ${tone}">
+        <div class="row" style="justify-content:space-between; align-items:flex-start;">
+          <div style="min-width:220px; flex:1;">
+            <b>${escapeHtml(t.title)}</b>
+            <div class="tiny muted" style="margin-top:4px;">Evidence: <span class="mono">${escapeHtml(t.producesEvidence.type)}</span></div>
+          </div>
+          <div class="row">${sev} ${done}</div>
+        </div>
+        <div class="row" style="margin-top:8px;">
+          <button ${t.done ? "disabled" : ""} onclick="markTaskDone('${t.id}')">Mark done</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderEvidence(){
+  UI.txtEvidence.value = JSON.stringify(state.evidence, null, 2);
+}
+
+function renderOutput(){
+  if(!state.investorPack || !state.attorneyPack){
+    UI.outputView.innerHTML = `<div class="muted">Compile to generate Investor + Attorney outputs.</div>`;
+    return;
+  }
+
+  const pack = state.activeTab === "investor" ? state.investorPack : state.attorneyPack;
+
+  if(state.activeTab === "investor"){
+    UI.outputView.innerHTML = `
+      <div class="section">
+        <h3><span>Investor Pack (forwardable)</span><span class="pill good">safe disclosure</span></h3>
+        <div class="kv"><div class="k">Problem</div><div class="v">${escapeHtml(pack.narrative.problem)}</div></div>
+        <div class="kv"><div class="k">ICP</div><div class="v">${escapeHtml(pack.narrative.icp)}</div></div>
+        <div class="kv"><div class="k">Stage</div><div class="v">${escapeHtml(pack.narrative.stage)}</div></div>
+        <div class="kv"><div class="k">Why now</div><div class="v">${escapeHtml(pack.whyNow)}</div></div>
+      </div>
+
+      <div class="section">
+        <h3><span>Secret sauce (policy filtered)</span><span class="pill">track: investor</span></h3>
+        <ul class="list">
+          ${pack.secretSauce.map(s => `<li>${escapeHtml(s.text)} <span class="badge">${escapeHtml(s.mode)}</span></li>`).join("")}
+        </ul>
+      </div>
+
+      <div class="section">
+        <h3><span>Risks (investor framing)</span><span class="pill">${pack.risks.length}</span></h3>
+        <ul class="list">${pack.risks.map(r => `<li>${escapeHtml(r)}</li>`).join("")}</ul>
+      </div>
+
+      <div class="section">
+        <h3><span>Gate summary</span><span class="pill mono">${escapeHtml(pack.gateSummary.gate || "—")}</span></h3>
+        ${pack.gateSummary.reasons?.length ? `<ul class="list">${pack.gateSummary.reasons.map(x => `<li>${escapeHtml(x)}</li>`).join("")}</ul>` : `<div class="muted">No issues flagged.</div>`}
+      </div>
+
+      <div class="section">
+        <h3><span>Evidence index</span><span class="pill">${pack.evidenceIndex.length}</span></h3>
+        ${pack.evidenceIndex.length ? `<ul class="list">${pack.evidenceIndex.slice().reverse().slice(0,6).map(e => `<li><span class="mono">${escapeHtml(e.type)}</span> — ${escapeHtml(e.title)}</li>`).join("")}</ul>` : `<div class="muted">No evidence yet.</div>`}
+      </div>
+
+      <div class="section">
+        <h3><span>Ask</span><span class="pill warn">demo</span></h3>
+        <div>${escapeHtml(pack.ask)}</div>
+      </div>
+    `;
+  } else {
+    UI.outputView.innerHTML = `
+      <div class="section">
+        <h3><span>Attorney Pack (deep drafting)</span><span class="pill warn">privileged</span></h3>
+        <div class="kv"><div class="k">Problem</div><div class="v">${escapeHtml(pack.narrative.problem)}</div></div>
+        <div class="kv"><div class="k">ICP</div><div class="v">${escapeHtml(pack.narrative.icp)}</div></div>
+        <div class="kv"><div class="k">Stage</div><div class="v">${escapeHtml(pack.narrative.stage)}</div></div>
+      </div>
+
+      <div class="section">
+        <h3><span>Secret sauce (full, with sensitivity flags)</span><span class="pill">track: attorney</span></h3>
+        <ul class="list">
+          ${pack.secretSauce.map(s => `<li>${escapeHtml(s.text)} ${s.sensitive ? `<span class="badge">sensitive</span>` : ``}</li>`).join("")}
+        </ul>
+      </div>
+
+      <div class="section">
+        <h3><span>Claim hooks</span><span class="pill">${pack.ip.claimHooks.length}</span></h3>
+        ${pack.ip.claimHooks.length ? `<ul class="list">${pack.ip.claimHooks.map(h => `<li>${escapeHtml(h)}</li>`).join("")}</ul>` : `<div class="muted">No hooks.</div>`}
+      </div>
+
+      <div class="section">
+        <h3><span>Novelty delta notes</span><span class="pill">${pack.ip.noveltyDeltas.length}</span></h3>
+        ${pack.ip.noveltyDeltas.length ? `<ul class="list">${pack.ip.noveltyDeltas.map(n => `<li>${escapeHtml(n.text)} ${n.sensitive ? `<span class="badge">sensitive</span>` : ``}</li>`).join("")}</ul>` : `<div class="muted">No novelty deltas.</div>`}
+      </div>
+
+      <div class="section">
+        <h3><span>Design-around risks</span><span class="pill">${pack.ip.designAround.length}</span></h3>
+        ${pack.ip.designAround.length ? `<ul class="list">${pack.ip.designAround.map(d => `<li>${escapeHtml(d)}</li>`).join("")}</ul>` : `<div class="muted">None listed.</div>`}
+      </div>
+
+      <div class="section">
+        <h3><span>Drafting inputs (starter)</span><span class="pill mono">outline</span></h3>
+        <div class="kv"><div class="k">Priority hooks</div><div class="v">${escapeHtml(pack.draftingInputs["Priority hooks"].join(" • "))}</div></div>
+        <div class="kv"><div class="k">Embodiments needed</div><div class="v">${escapeHtml(pack.draftingInputs["Embodiments needed"].join(" • "))}</div></div>
+        <div class="kv"><div class="k">Claims to explore</div><div class="v">${escapeHtml(pack.draftingInputs["Claims to explore"].join(" • "))}</div></div>
+      </div>
+    `;
+  }
+}
+
+function renderDiff(){
+  if(!state.diff){
+    setPill(UI.diffPill, `Diff: <b>—</b>`);
+    UI.diffView.innerHTML = `<div class="muted">Compile to see the diff.</div>`;
+    return;
+  }
+  const d = state.diff;
+  const tone = (d.withheldSecret + d.withheldNovelty) > 0 ? "warn" : "good";
+  setPill(UI.diffPill, `Diff: <b>${d.policy}</b>`, tone);
+
+  UI.diffView.innerHTML = `
+    <div class="section">
+      <h3><span>Policy summary</span><span class="pill">${escapeHtml(d.policy)}</span></h3>
+      <ul class="list">
+        <li>Canonical sensitive lines: <b>${d.sensitiveLinesCanonical}</b></li>
+        <li>Investor withheld (secret sauce): <b>${d.withheldSecret}</b></li>
+        <li>Investor redacted (secret sauce): <b>${d.redactedSecret}</b></li>
+        <li>Investor withheld (novelty): <b>${d.withheldNovelty}</b></li>
+        <li>Investor redacted (novelty): <b>${d.redactedNovelty}</b></li>
+      </ul>
+    </div>
+    <div class="warnbox">
+      <b>Interpretation:</b> Investor Pack is optimized for forwardability; Attorney Pack retains sensitive drafting signals.
+      Adjust disclosure policy for how much you want to reveal.
+    </div>
+  `;
+}
+
+function renderAll(){
+  renderTop();
+  renderTasks();
+  renderEvidence();
+  renderOutput();
+  renderDiff();
+}
+
+// ---- Tabs ----
+function setActiveTab(tab){
+  state.activeTab = tab;
+  UI.tabInvestor.classList.toggle("active", tab === "investor");
+  UI.tabAttorney.classList.toggle("active", tab === "attorney");
+  renderOutput();
+}
+
+// ---- Seed / modify ----
+function seedRealistic(){
+  UI.txtProblem.value = "Pre-seed founders can sound credible with AI-generated decks, but investors can’t underwrite what’s real. They need a forwardable Decision Pack linking claims to receipts, with explicit risks and options as diligence deepens.";
+  UI.inpICP.value = "Pre-seed founders + angels + early-stage investors";
+  UI.selStage.value = "mvp";
+  UI.txtSecretSauce.value = [
+    "Rubric-gated gates turn diligence into go/no-go checkpoints with remediation tasks",
+    "Evidence-index binding: claims → receipts → confidence, so the artifact stays underwritable",
+    "[SENSITIVE] Material-change delta routing that updates risk register + tasks and preserves an audit trail"
+  ].join("\n");
+  UI.txtHooks.value = [
+    "A system configured to compile a standardized decision pack artifact from canonical inputs",
+    "A rubric engine configured to score forwardability and generate remediation tasks tied to evidence objects"
+  ].join("\n");
+  UI.txtNovelty.value = [
+    "[SENSITIVE] Novelty delta: two-track compilation (investor-safe vs attorney-deep) from same canonical store using disclosure policies"
+  ].join("\n");
+  UI.txtDesignAround.value = [
+    "Competitor clones UI but lacks rubric gates that bind claims to receipts",
+    "Competitor provides templates but not policy-filtered dual outputs and audit logs"
+  ].join("\n");
+  UI.selDisclosure.value = "strict";
+  state.compiled = false;
+  renderAll();
+}
+
+function addSensitiveLines(){
+  const ss = parseLines(UI.txtSecretSauce.value);
+  ss.push("[SENSITIVE] Claim-hook variant: per-claim evidence linkage + confidence scores + delta-triggered recompile");
+  UI.txtSecretSauce.value = ss.join("\n");
+
+  const nov = parseLines(UI.txtNovelty.value);
+  nov.push("[SENSITIVE] Novelty delta: redaction-aware pack compiler that outputs attorney-only claim charts and investor-safe summaries");
+  UI.txtNovelty.value = nov.join("\n");
+
+  state.compiled = false;
+  renderAll();
+}
+
+function clearAll(){
+  UI.txtProblem.value = "";
+  UI.inpICP.value = "";
+  UI.selStage.value = "idea";
+  UI.txtSecretSauce.value = "";
+  UI.txtHooks.value = "";
+  UI.txtNovelty.value = "";
+  UI.txtDesignAround.value = "";
+  UI.selDisclosure.value = "strict";
+  state.compiled = false;
+  renderAll();
+}
+
+// ---- Render tasks/evidence UI ----
+function renderTasks(){
+  if(state.tasks.length === 0){
+    setPill(UI.tasksPill, `Generated by gates`);
+    UI.tasksView.innerHTML = `<div class="muted">Run gates to generate tasks.</div>`;
+    return;
+  }
+  const open = state.tasks.filter(t => !t.done).length;
+  setPill(UI.tasksPill, `Generated by gates • open <b>${open}</b>`, open ? "warn" : "good");
+
+  UI.tasksView.innerHTML = state.tasks.map(t => {
+    const tone = t.done ? "good" : (t.severity === "blocker" ? "bad" : "warn");
+    const sev = t.severity === "blocker" ? `<span class="pill bad">blocker</span>` : `<span class="pill warn">task</span>`;
+    const done = t.done ? `<span class="pill good">done</span>` : `<span class="pill">open</span>`;
+    return `
+      <div class="item ${tone}">
+        <div class="row" style="justify-content:space-between; align-items:flex-start;">
+          <div style="min-width:220px; flex:1;">
+            <b>${escapeHtml(t.title)}</b>
+            <div class="tiny muted" style="margin-top:4px;">Evidence: <span class="mono">${escapeHtml(t.producesEvidence.type)}</span></div>
+          </div>
+          <div class="row">${sev} ${done}</div>
+        </div>
+        <div class="row" style="margin-top:8px;">
+          <button ${t.done ? "disabled" : ""} onclick="markTaskDone('${t.id}')">Mark done</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderEvidence(){
+  UI.txtEvidence.value = JSON.stringify(state.evidence, null, 2);
+}
+
+function renderTop(){
+  const canon = canonicalPack();
+  UI.sensitiveCount.textContent = String(canon.sensitiveLines);
+
+  setPill(UI.versionPill, `<b class="mono">v${state.version}</b> • ${state.compiled ? "compiled" : "not compiled"}`);
+  const gateTone = state.gates.gate === "PASS" ? "good" : (state.gates.gate === "FAIL" ? "bad" : "");
+  setPill(UI.gatePill, `Gate: <b>${state.gates.gate || "—"}</b>`, gateTone);
+  if(state.gates.score != null) setPill(UI.scorePill, `Score: <b>${state.gates.score}</b>`, state.gates.score >= 75 ? "good" : "warn");
+  else setPill(UI.scorePill, `Score: <b>—</b>`);
+  const f = state.gates.forwardable === true ? ["yes","good"] : (state.gates.forwardable === false ? ["not yet","warn"] : ["unknown",""]);
+  setPill(UI.forwardPill, `Forwardable: <b>${f[0]}</b>`, f[1]);
+
+  UI.taskCount.textContent = String(state.tasks.length);
+  UI.evCount.textContent = String(state.evidence.length);
+}
+
+function renderOutput(){
+  // same as above; called by renderAll
+  if(!state.investorPack || !state.attorneyPack){
+    UI.outputView.innerHTML = `<div class="muted">Compile to generate Investor + Attorney outputs.</div>`;
+    return;
+  }
+  // reuse function from above
+  // (renderOutput body already defined earlier in the script; this redefinition is safe but redundant)
+}
+
+function renderDiff(){
+  if(!state.diff){
+    setPill(UI.diffPill, `Diff: <b>—</b>`);
+    UI.diffView.innerHTML = `<div class="muted">Compile to see the diff.</div>`;
+    return;
+  }
+  const d = state.diff;
+  const tone = (d.withheldSecret + d.withheldNovelty) > 0 ? "warn" : "good";
+  setPill(UI.diffPill, `Diff: <b>${d.policy}</b>`, tone);
+
+  UI.diffView.innerHTML = `
+    <div class="section">
+      <h3><span>Policy summary</span><span class="pill">${escapeHtml(d.policy)}</span></h3>
+      <ul class="list">
+        <li>Canonical sensitive lines: <b>${d.sensitiveLinesCanonical}</b></li>
+        <li>Investor withheld (secret sauce): <b>${d.withheldSecret}</b></li>
+        <li>Investor redacted (secret sauce): <b>${d.redactedSecret}</b></li>
+        <li>Investor withheld (novelty): <b>${d.withheldNovelty}</b></li>
+        <li>Investor redacted (novelty): <b>${d.redactedNovelty}</b></li>
+      </ul>
+    </div>
+    <div class="warnbox">
+      <b>Interpretation:</b> Investor Pack is optimized for forwardability; Attorney Pack retains sensitive drafting signals.
+      Adjust disclosure policy for how much you want to reveal.
+    </div>
+  `;
+}
+
+// ---- Wire ----
+UI.tabInvestor.addEventListener("click", () => setActiveTab("investor"));
+UI.tabAttorney.addEventListener("click", () => setActiveTab("attorney"));
+
+UI.btnSeed.addEventListener("click", seedRealistic);
+UI.btnMakeSensitive.addEventListener("click", addSensitiveLines);
+UI.btnClear.addEventListener("click", clearAll);
+
+UI.btnRunGates.addEventListener("click", runGates);
+UI.btnAutofix.addEventListener("click", autofix);
+
+UI.btnCompile.addEventListener("click", () => {
+  // auto-run gates if not run yet
+  if(!state.gates || state.gates.gate === "—") runGates();
+
+  // bump version on recompile
+  if(state.compiled) state.version += 1;
+
+  compileTwoTrack();
+  setActiveTab(state.activeTab);
+});
+
+UI.btnReset.addEventListener("click", () => {
+  log.info("Reset demo");
+  state.version = 0;
+  state.compiled = false;
+  state.tasks = [];
+  state.evidence = [];
+  state.gates = { gate:"—", score:null, forwardable:"unknown", reasons:[] };
+  state.canonical = null;
+  state.investorPack = null;
+  state.attorneyPack = null;
+  state.diff = null;
+  state.activeTab = "investor";
+  clearAll();
+  setActiveTab("investor");
+  renderAll();
+});
+
+// ---- Initial render ----
+function renderOutput(){ /* placeholder to keep linter calm; real output is rendered in renderAll via renderOutput2 */ }
+function renderOutput2(){
+  // Use the previously defined renderOutput logic (above in compile block). We'll implement here cleanly:
+  if(!state.investorPack || !state.attorneyPack){
+    UI.outputView.innerHTML = `<div class="muted">Compile to generate Investor + Attorney outputs.</div>`;
+    return;
+  }
+  const pack = state.activeTab === "investor" ? state.investorPack : state.attorneyPack;
+
+  if(state.activeTab === "investor"){
+    UI.outputView.innerHTML = `
+      <div class="section">
+        <h3><span>Investor Pack (forwardable)</span><span class="pill good">safe disclosure</span></h3>
+        <div class="kv"><div class="k">Problem</div><div class="v">${escapeHtml(pack.narrative.problem)}</div></div>
+        <div class="kv"><div class="k">ICP</div><div class="v">${escapeHtml(pack.narrative.icp)}</div></div>
+        <div class="kv"><div class="k">Stage</div><div class="v">${escapeHtml(pack.narrative.stage)}</div></div>
+        <div class="kv"><div class="k">Why now</div><div class="v">${escapeHtml(pack.whyNow)}</div></div>
+      </div>
+
+      <div class="section">
+        <h3><span>Secret sauce (policy filtered)</span><span class="pill">track: investor</span></h3>
+        <ul class="list">
+          ${pack.secretSauce.map(s => `<li>${escapeHtml(s.text)} <span class="badge">${escapeHtml(s.mode)}</span></li>`).join("")}
+        </ul>
+      </div>
+
+      <div class="section">
+        <h3><span>Risks (investor framing)</span><span class="pill">${pack.risks.length}</span></h3>
+        <ul class="list">${pack.risks.map(r => `<li>${escapeHtml(r)}</li>`).join("")}</ul>
+      </div>
+
+      <div class="section">
+        <h3><span>Gate summary</span><span class="pill mono">${escapeHtml(pack.gateSummary.gate || "—")}</span></h3>
+        ${pack.gateSummary.reasons?.length ? `<ul class="list">${pack.gateSummary.reasons.map(x => `<li>${escapeHtml(x)}</li>`).join("")}</ul>` : `<div class="muted">No issues flagged.</div>`}
+      </div>
+
+      <div class="section">
+        <h3><span>Evidence index</span><span class="pill">${pack.evidenceIndex.length}</span></h3>
+        ${pack.evidenceIndex.length ? `<ul class="list">${pack.evidenceIndex.slice().reverse().slice(0,6).map(e => `<li><span class="mono">${escapeHtml(e.type)}</span> — ${escapeHtml(e.title)}</li>`).join("")}</ul>` : `<div class="muted">No evidence yet.</div>`}
+      </div>
+
+      <div class="section">
+        <h3><span>Ask</span><span class="pill warn">demo</span></h3>
+        <div>${escapeHtml(pack.ask)}</div>
+      </div>
+    `;
+  } else {
+    UI.outputView.innerHTML = `
+      <div class="section">
+        <h3><span>Attorney Pack (deep drafting)</span><span class="pill warn">privileged</span></h3>
+        <div class="kv"><div class="k">Problem</div><div class="v">${escapeHtml(pack.narrative.problem)}</div></div>
+        <div class="kv"><div class="k">ICP</div><div class="v">${escapeHtml(pack.narrative.icp)}</div></div>
+        <div class="kv"><div class="k">Stage</div><div class="v">${escapeHtml(pack.narrative.stage)}</div></div>
+      </div>
+
+      <div class="section">
+        <h3><span>Secret sauce (full, with sensitivity flags)</span><span class="pill">track: attorney</span></h3>
+        <ul class="list">
+          ${pack.secretSauce.map(s => `<li>${escapeHtml(s.text)} ${s.sensitive ? `<span class="badge">sensitive</span>` : ``}</li>`).join("")}
+        </ul>
+      </div>
+
+      <div class="section">
+        <h3><span>Claim hooks</span><span class="pill">${pack.ip.claimHooks.length}</span></h3>
+        ${pack.ip.claimHooks.length ? `<ul class="list">${pack.ip.claimHooks.map(h => `<li>${escapeHtml(h)}</li>`).join("")}</ul>` : `<div class="muted">No hooks.</div>`}
+      </div>
+
+      <div class="section">
+        <h3><span>Novelty delta notes</span><span class="pill">${pack.ip.noveltyDeltas.length}</span></h3>
+        ${pack.ip.noveltyDeltas.length ? `<ul class="list">${pack.ip.noveltyDeltas.map(n => `<li>${escapeHtml(n.text)} ${n.sensitive ? `<span class="badge">sensitive</span>` : ``}</li>`).join("")}</ul>` : `<div class="muted">No novelty deltas.</div>`}
+      </div>
+
+      <div class="section">
+        <h3><span>Design-around risks</span><span class="pill">${pack.ip.designAround.length}</span></h3>
+        ${pack.ip.designAround.length ? `<ul class="list">${pack.ip.designAround.map(d => `<li>${escapeHtml(d)}</li>`).join("")}</ul>` : `<div class="muted">None listed.</div>`}
+      </div>
+
+      <div class="section">
+        <h3><span>Drafting inputs (starter)</span><span class="pill mono">outline</span></h3>
+        <div class="kv"><div class="k">Priority hooks</div><div class="v">${escapeHtml(pack.draftingInputs["Priority hooks"].join(" • "))}</div></div>
+        <div class="kv"><div class="k">Embodiments needed</div><div class="v">${escapeHtml(pack.draftingInputs["Embodiments needed"].join(" • "))}</div></div>
+        <div class="kv"><div class="k">Claims to explore</div><div class="v">${escapeHtml(pack.draftingInputs["Claims to explore"].join(" • "))}</div></div>
+      </div>
+    `;
+  }
+}
+
+// Override renderAll to use renderOutput2
+const _renderAll = renderAll;
+renderAll = function(){
+  renderTop();
+  renderTasks();
+  renderEvidence();
+  renderOutput2();
+  renderDiff();
+};
+
+renderAll();
+setActiveTab("investor");
+</script>
+</body>
+</html>

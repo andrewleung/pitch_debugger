@@ -1,0 +1,839 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Decision Pack Cold Start Demo (Pitch Debugger + Workflow OS)</title>
+  <style>
+    :root{
+      --bg:#0b1020; --panel:#0f1733; --panel2:#0c1430; --border:#243058;
+      --text:#e8ecff; --muted:#a9b4e6; --good:#38d39f; --warn:#ffd166; --bad:#ff6b6b; --accent:#7aa2ff;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:var(--sans); background:linear-gradient(180deg,#070b17 0%, #0b1020 40%, #060916 100%); color:var(--text);}
+    header{
+      padding:16px 20px; border-bottom:1px solid var(--border); background:rgba(15,23,51,0.65); backdrop-filter: blur(8px);
+      position:sticky; top:0; z-index:5;
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+    }
+    header h1{ margin:0; font-size:16px; letter-spacing:0.2px; }
+    header .sub{ color:var(--muted); font-size:12px; }
+    .wrap{ padding:16px 20px 24px; max-width:1320px; margin:0 auto;}
+    .grid{ display:grid; grid-template-columns: 1.05fr 0.95fr; gap:14px; }
+    @media (max-width: 980px){ .grid{ grid-template-columns: 1fr; } }
+    .card{
+      border:1px solid var(--border); border-radius:14px; background:rgba(15,23,51,0.55);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.25); overflow:hidden;
+    }
+    .card .hd{
+      padding:12px 14px; border-bottom:1px solid var(--border);
+      display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+      background:linear-gradient(180deg, rgba(122,162,255,0.08), rgba(15,23,51,0.0));
+    }
+    .card .hd .title{ font-weight:650; font-size:13px; }
+    .card .hd .hint{ color:var(--muted); font-size:12px; }
+    .card .bd{ padding:12px 14px; }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    button{
+      border:1px solid var(--border); background:#101a3a; color:var(--text);
+      padding:9px 10px; border-radius:10px; cursor:pointer; font-weight:600; font-size:12px;
+    }
+    button:hover{ border-color:#32407a; background:#0f1a3f; }
+    button.primary{ border-color: rgba(122,162,255,0.7); box-shadow:0 0 0 2px rgba(122,162,255,0.12) inset; }
+    button.danger{ border-color: rgba(255,107,107,0.75); }
+    button:disabled{ opacity:0.55; cursor:not-allowed; }
+    .pill{
+      display:inline-flex; align-items:center; gap:6px;
+      padding:4px 8px; border-radius:999px; border:1px solid var(--border); background:rgba(12,20,48,0.8);
+      font-size:11px; color:var(--muted);
+    }
+    .pill b{ color:var(--text); font-weight:700; }
+    .pill.good{ border-color: rgba(56,211,159,0.5); }
+    .pill.warn{ border-color: rgba(255,209,102,0.6); }
+    .pill.bad{ border-color: rgba(255,107,107,0.55); }
+    textarea, input, select{
+      width:100%; border-radius:12px; border:1px solid var(--border); background:rgba(12,20,48,0.75); color:var(--text);
+      padding:10px 10px; font-size:12px; outline:none;
+    }
+    textarea{ min-height:120px; resize:vertical; font-family:var(--mono); line-height:1.35; }
+    .two{ display:grid; grid-template-columns: 1fr 1fr; gap:10px;}
+    @media (max-width: 680px){ .two{ grid-template-columns:1fr; } }
+    .mono{ font-family:var(--mono); }
+    .muted{ color:var(--muted); }
+    .section{
+      border:1px solid rgba(36,48,88,0.75); background:rgba(12,20,48,0.45);
+      border-radius:12px; padding:10px; margin:10px 0;
+    }
+    .section h3{ margin:0 0 6px; font-size:12px; display:flex; align-items:center; justify-content:space-between; }
+    .kv{ display:grid; grid-template-columns: 170px 1fr; gap:8px; margin:4px 0; }
+    .kv .k{ color:var(--muted); font-size:11px; }
+    .kv .v{ font-size:12px; }
+    .list{ margin:6px 0 0; padding-left:16px; }
+    .list li{ margin:4px 0; font-size:12px; }
+    .tag{
+      display:inline-block; margin-left:8px;
+      font-size:10px; padding:2px 6px; border-radius:8px; border:1px dashed rgba(255,209,102,0.7); color:var(--warn);
+      vertical-align:middle;
+    }
+    .task{
+      border:1px solid var(--border); background:rgba(12,20,48,0.55); border-radius:12px; padding:10px; margin:8px 0;
+    }
+    .task .top{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+    .task .name{ font-weight:700; font-size:12px; }
+    .task .meta{ color:var(--muted); font-size:11px; margin-top:2px; }
+    .task .actions{ display:flex; gap:8px; }
+    .task.done{ border-color: rgba(56,211,159,0.45); }
+    .task.blocker{ border-color: rgba(255,107,107,0.55); }
+    .hr{ height:1px; background:var(--border); margin:12px 0; opacity:0.85; }
+    .tiny{ font-size:11px; color:var(--muted); }
+    .rightcol{ display:grid; grid-template-rows:auto auto 1fr; gap:14px;}
+    .footer{
+      margin-top:14px; color:var(--muted); font-size:11px;
+    }
+    .codechip{
+      padding:6px 8px; border-radius:10px; background:rgba(12,20,48,0.7); border:1px solid var(--border);
+      font-family:var(--mono); font-size:11px; color:var(--text); display:inline-flex; align-items:center; gap:8px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Flow 1 Demo: Cold Start → Decision Pack v0 → Rubrics → Tasks → Recompile</h1>
+      <div class="sub">Components: <b>Pitch Debugger</b> (compiler) + <b>Workflow OS</b> (rubrics/gates) → keeps the <b>Decision Pack</b> underwritable.</div>
+    </div>
+    <div class="row">
+      <span class="pill mono" id="versionPill"><b>v0</b> • not compiled</span>
+      <button class="primary" id="btnCompile">Compile Decision Pack</button>
+      <button id="btnRunRubrics">Run Rubrics</button>
+      <button class="danger" id="btnReset">Reset Demo</button>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="grid">
+      <!-- LEFT: INPUTS + TASKS -->
+      <div class="card">
+        <div class="hd">
+          <div>
+            <div class="title">Pitch Debugger — Inputs (mock data, editable)</div>
+            <div class="hint">Edit any text, then <span class="codechip">Compile</span>. Open DevTools → Console for debug logs.</div>
+          </div>
+          <div class="row">
+            <span class="pill" id="inputStatusPill">Inputs: <b>mock</b></span>
+            <span class="pill" id="evidencePill">Evidence items: <b id="evidenceCount">0</b></span>
+          </div>
+        </div>
+        <div class="bd">
+          <div class="two">
+            <div>
+              <div class="tiny">Founder one-liner</div>
+              <input id="inpOneLiner" />
+            </div>
+            <div>
+              <div class="tiny">ICP / buyer</div>
+              <input id="inpICP" />
+            </div>
+          </div>
+
+          <div class="two" style="margin-top:10px;">
+            <div>
+              <div class="tiny">Deck bullets (simulated)</div>
+              <textarea id="inpDeck"></textarea>
+            </div>
+            <div>
+              <div class="tiny">Call transcript snippet (simulated)</div>
+              <textarea id="inpTranscript"></textarea>
+            </div>
+          </div>
+
+          <div class="two" style="margin-top:10px;">
+            <div>
+              <div class="tiny">Current traction metrics (simulated)</div>
+              <textarea id="inpMetrics"></textarea>
+            </div>
+            <div>
+              <div class="tiny">Competitors mentioned (simulated)</div>
+              <textarea id="inpCompetitors"></textarea>
+            </div>
+          </div>
+
+          <div class="hr"></div>
+
+          <div class="section">
+            <h3>
+              <span>Workflow OS — Tasks (generated by rubrics)</span>
+              <span class="pill" id="rubricPill">Rubrics: <b>not run</b></span>
+            </h3>
+            <div id="tasks"></div>
+            <div class="footer">
+              Tip: click <b>Mark done</b> to “produce evidence,” then re-compile.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: DECISION PACK VIEW + RUBRIC OUTPUT + VERSION HISTORY -->
+      <div class="rightcol">
+        <div class="card">
+          <div class="hd">
+            <div>
+              <div class="title">Decision Pack — Canonical Artifact</div>
+              <div class="hint">This is what becomes “forwardable” once rubric gates pass.</div>
+            </div>
+            <div class="row">
+              <span class="pill" id="forwardablePill">Forwardable: <b>unknown</b></span>
+              <span class="pill mono" id="scorePill">Score: <b>—</b></span>
+            </div>
+          </div>
+          <div class="bd" id="decisionPackView">
+            <div class="muted">Compile to generate Decision Pack v0.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="hd">
+            <div>
+              <div class="title">Workflow OS — Rubric Output (what’s missing)</div>
+              <div class="hint">A simple rubric model: Evidence, Risks, Differentiators, ICP clarity.</div>
+            </div>
+            <div class="row">
+              <span class="pill" id="gatePill">Gate: <b>—</b></span>
+            </div>
+          </div>
+          <div class="bd" id="rubricView">
+            <div class="muted">Run rubrics after compiling.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="hd">
+            <div>
+              <div class="title">Version History (delta-friendly)</div>
+              <div class="hint">Each compile increments version. (Material Change Publisher not shown here.)</div>
+            </div>
+            <div class="row">
+              <span class="pill" id="historyPill">Entries: <b id="historyCount">0</b></span>
+            </div>
+          </div>
+          <div class="bd" id="historyView">
+            <div class="muted">No versions yet.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/**
+ * Flow 1 demo:
+ * - Pitch Debugger compiles a Decision Pack from messy inputs
+ * - Workflow OS runs rubrics and generates tasks
+ * - Completing tasks produces evidence and improves rubric score
+ *
+ * Debugging: open DevTools → Console.
+ */
+
+const log = {
+  info: (...a) => console.info("[demo]", ...a),
+  debug: (...a) => console.debug("[demo]", ...a),
+  warn: (...a) => console.warn("[demo]", ...a),
+  group: (label) => console.group(label),
+  groupEnd: () => console.groupEnd(),
+};
+
+const MOCK = {
+  oneLiner: "Pitch Debugger turns founder pitches into an underwritable decision pack (evidence, risks, options) investors can forward internally.",
+  icp: "Pre-seed / seed founders + angel syndicates; secondary: early-stage investors and boutique patent teams.",
+  deck: [
+    "Problem: Investors are flooded with credible-sounding AI decks; hard to underwrite what's real.",
+    "Solution: A standardized Decision Pack: landscape snapshot, secret-sauce map, risk register, evidence plan.",
+    "Wedge: founders need clarity BEFORE attorneys; fast scan and structured pack removes ambiguity.",
+    "Differentiator: underwriting-first pack + rubric gates vs polish-first decks.",
+    "Business model: paid pack + subscription refresh."
+  ].join("\n"),
+  transcript: [
+    "Investor: 'What exactly is defensible here and what evidence do you have today?'",
+    "Founder: 'We have strong anecdotal user love, but only 2 pilot conversations recorded.'",
+    "Investor: 'Show me competitor adjacency and how you test the claims quickly.'",
+    "Founder: 'We can run a 10-founder experiment with a rubric score and conversion to paid.'"
+  ].join("\n"),
+  metrics: [
+    "Waitlist: 47 founders",
+    "Demos: 11",
+    "Paid pilots: 2 ($500 each)",
+    "Time-to-pack: ~45 min (manual)",
+    "Conversion hypothesis: 10% waitlist → paid pack"
+  ].join("\n"),
+  competitors: [
+    "AI deck builders: generic pitch generators; high polish, low verification",
+    "Consultants: bespoke, expensive; not scalable; no standardized underwriting packet",
+    "Notion templates: flexible but no evidence/risk gating",
+    "Patent search tools: prior art focus; don't connect to underwriting story"
+  ].join("\n"),
+};
+
+const state = {
+  version: 0,
+  compiled: false,
+  forwardable: "unknown",
+  score: null,
+  evidence: [], // array of {id, type, title, payload, ts}
+  tasks: [],    // array of {id, title, severity, done, producesEvidence}
+  history: [],  // array of {version, ts, summary}
+  decisionPack: null,
+  rubric: null
+};
+
+// ---------- DOM ----------
+const el = (id) => document.getElementById(id);
+
+const UI = {
+  oneLiner: el("inpOneLiner"),
+  icp: el("inpICP"),
+  deck: el("inpDeck"),
+  transcript: el("inpTranscript"),
+  metrics: el("inpMetrics"),
+  competitors: el("inpCompetitors"),
+
+  decisionPackView: el("decisionPackView"),
+  rubricView: el("rubricView"),
+  tasksView: el("tasks"),
+  historyView: el("historyView"),
+
+  versionPill: el("versionPill"),
+  forwardablePill: el("forwardablePill"),
+  scorePill: el("scorePill"),
+  gatePill: el("gatePill"),
+  rubricPill: el("rubricPill"),
+  evidenceCount: el("evidenceCount"),
+  evidencePill: el("evidencePill"),
+  historyCount: el("historyCount"),
+
+  btnCompile: el("btnCompile"),
+  btnRunRubrics: el("btnRunRubrics"),
+  btnReset: el("btnReset"),
+};
+
+// ---------- Helpers ----------
+const nowIso = () => new Date().toISOString();
+const uid = (prefix) => `${prefix}_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`;
+
+function setPill(pillEl, status, tone){
+  pillEl.classList.remove("good","warn","bad");
+  if(tone) pillEl.classList.add(tone);
+  pillEl.innerHTML = status;
+}
+
+function parseLines(text){
+  return text.split("\n").map(s => s.trim()).filter(Boolean);
+}
+
+function summarizePack(dp){
+  const gaps = dp.gaps?.length || 0;
+  const risks = dp.riskRegister?.length || 0;
+  const receipts = dp.evidenceIndex?.length || 0;
+  return `v${state.version} • gaps:${gaps} risks:${risks} receipts:${receipts}`;
+}
+
+// ---------- Pitch Debugger (Compiler) ----------
+function compileDecisionPack(inputs){
+  log.group("Pitch Debugger.compileDecisionPack()");
+  log.debug("inputs", inputs);
+
+  const deckBullets = parseLines(inputs.deck);
+  const transcriptLines = parseLines(inputs.transcript);
+  const metricsLines = parseLines(inputs.metrics);
+  const competitorLines = parseLines(inputs.competitors);
+
+  // Very simple extraction heuristics (mock):
+  const differentiators = [
+    { claim: "Underwriting-first artifact (Decision Pack) vs polish-first deck", proofNeeded: "investor-forward rate; diligence speed" },
+    { claim: "Rubric-driven gaps + tasks reduce ambiguity", proofNeeded: "rubric score improvement vs baseline" },
+    { claim: "Fast, low-cost clarity without pressuring patent filing", proofNeeded: "time-to-pack; founder NPS" }
+  ];
+
+  // Landscape snapshot (mock):
+  const landscape = [
+    { category: "AI deck builders", note: "High persuasion / low verification" },
+    { category: "Consultants", note: "High customization / low scalability" },
+    { category: "Templates", note: "Low structure; no gating" },
+    { category: "Patent search tools", note: "IP-only; not underwriting pack" }
+  ];
+
+  // Evidence Index from state.evidence:
+  const evidenceIndex = state.evidence.map(e => ({
+    id: e.id,
+    title: e.title,
+    type: e.type,
+    linkedTo: e.payload?.linkedTo || ["(unlinked)"],
+    ts: e.ts
+  }));
+
+  // Risk register (seeded, then improved by evidence):
+  const riskRegister = [
+    { id: "R1", risk: "Differentiation remains narrative (not measurable)", mitigation: "Define rubric score; track conversion and forward rate", status: "open" },
+    { id: "R2", risk: "ICP unclear (who pays and why now)", mitigation: "Run 10-founder interviews; price sensitivity; buyer mapping", status: "open" },
+    { id: "R3", risk: "Manual process too slow to scale", mitigation: "Instrument compile pipeline; reduce time-to-pack", status: "open" },
+  ];
+
+  // Evidence plan (generated placeholders; Workflow OS will turn into tasks)
+  const evidencePlan = [
+    { id: "E1", task: "Collect 10 founder interviews with consistent rubric scoring", owner: "Founder", due: "2 weeks" },
+    { id: "E2", task: "Run competitor adjacency scan for 3 real startups", owner: "Ops", due: "1 week" },
+    { id: "E3", task: "Create a sample pack and test investor forwardability", owner: "Founder", due: "2 weeks" },
+  ];
+
+  // Gaps (compiler flags missing fields)
+  const gaps = [];
+  if(!inputs.oneLiner || inputs.oneLiner.length < 20) gaps.push({ id:"G1", gap:"One-liner is too vague", severity:"warn" });
+  if(!inputs.icp || inputs.icp.length < 10) gaps.push({ id:"G2", gap:"ICP / buyer not specified", severity:"blocker" });
+
+  // Also treat low evidence count as a gap
+  if(evidenceIndex.length < 2) gaps.push({ id:"G3", gap:"Insufficient receipts linked to core claims", severity:"blocker" });
+
+  // And if competitors are empty
+  if(competitorLines.length < 2) gaps.push({ id:"G4", gap:"Landscape snapshot incomplete (competitors missing)", severity:"warn" });
+
+  const dp = {
+    meta: {
+      id: uid("DP"),
+      compiledAt: nowIso(),
+      version: state.version,
+      title: "Decision Pack — Pitch Debugger (Demo)",
+      oneLiner: inputs.oneLiner,
+      icp: inputs.icp
+    },
+    landscapeSnapshot: landscape,
+    secretSauceHypothesisMap: differentiators,
+    riskRegister,
+    evidencePlan,
+    evidenceIndex,
+    sourceNotes: {
+      deckBulletsCount: deckBullets.length,
+      transcriptLinesCount: transcriptLines.length,
+      metricsLinesCount: metricsLines.length,
+      competitorLinesCount: competitorLines.length
+    },
+    gaps
+  };
+
+  log.debug("compiled Decision Pack", dp);
+  log.groupEnd();
+  return dp;
+}
+
+// ---------- Workflow OS (Rubrics + Gates + Tasking) ----------
+function runRubrics(dp){
+  log.group("WorkflowOS.runRubrics()");
+  log.debug("input dp.meta", dp?.meta);
+
+  // Simple rubric scoring (0-100)
+  let score = 0;
+  const checks = [];
+
+  // Evidence coverage
+  const receipts = dp.evidenceIndex.length;
+  const evidenceScore = Math.min(30, receipts * 10); // 0..30
+  score += evidenceScore;
+  checks.push({ key:"Evidence", score:evidenceScore, max:30, note:`Receipts linked: ${receipts}` });
+
+  // Risks present + mitigations
+  const risks = dp.riskRegister.length;
+  const riskScore = risks >= 3 ? 20 : (risks * 6);
+  score += riskScore;
+  checks.push({ key:"Risk Register", score:riskScore, max:20, note:`Risks: ${risks}` });
+
+  // Differentiators clarity
+  const diffs = dp.secretSauceHypothesisMap.length;
+  const diffScore = diffs >= 3 ? 25 : (diffs * 7);
+  score += diffScore;
+  checks.push({ key:"Secret Sauce Map", score:diffScore, max:25, note:`Hypotheses: ${diffs}` });
+
+  // ICP clarity
+  const icpScore = dp.meta.icp && dp.meta.icp.length > 20 ? 25 : (dp.meta.icp ? 12 : 0);
+  score += icpScore;
+  checks.push({ key:"ICP Clarity", score:icpScore, max:25, note: dp.meta.icp ? "Has ICP line" : "Missing ICP" });
+
+  // Gate logic
+  const blockers = dp.gaps.filter(g => g.severity === "blocker").length;
+  const gatePass = (score >= 75) && (blockers === 0);
+
+  const rubric = {
+    scoredAt: nowIso(),
+    totalScore: score,
+    gate: gatePass ? "PASS" : "FAIL",
+    blockers,
+    checks
+  };
+
+  log.debug("rubric", rubric);
+
+  // Generate tasks based on gaps and rubric shortfalls
+  const tasks = [];
+
+  // Tasks from gaps
+  for(const g of dp.gaps){
+    tasks.push({
+      id: uid("T"),
+      title: g.gap,
+      severity: g.severity === "blocker" ? "blocker" : "normal",
+      done: false,
+      producesEvidence: g.id === "G3" ? {
+        type: "receipt",
+        title: "Investor-forwardability test memo",
+        payload: { linkedTo: ["Underwriting-first artifact"] }
+      } : null
+    });
+  }
+
+  // Add tasks if evidence is low
+  if(receipts < 3){
+    tasks.push({
+      id: uid("T"),
+      title: "Add 2 receipts: (1) founder interview notes, (2) sample pack export",
+      severity: "blocker",
+      done: false,
+      producesEvidence: {
+        type: "receipt",
+        title: "Founder interview notes (mock)",
+        payload: { linkedTo: ["Rubric-driven gaps + tasks reduce ambiguity"] }
+      }
+    });
+  }
+
+  // Add tasks if ICP score low
+  if(icpScore < 20){
+    tasks.push({
+      id: uid("T"),
+      title: "Clarify buyer: who pays, budget owner, and why now (1 paragraph)",
+      severity: "normal",
+      done: false,
+      producesEvidence: {
+        type: "note",
+        title: "ICP / buyer clarification note (mock)",
+        payload: { linkedTo: ["ICP clarity"] }
+      }
+    });
+  }
+
+  // Deduplicate tasks by title (simple)
+  const seen = new Set();
+  const deduped = tasks.filter(t => (seen.has(t.title) ? false : (seen.add(t.title), true)));
+
+  log.debug("generated tasks", deduped);
+  log.groupEnd();
+
+  return { rubric, tasks: deduped };
+}
+
+// ---------- Evidence production (from tasks) ----------
+function markTaskDone(taskId){
+  const idx = state.tasks.findIndex(t => t.id === taskId);
+  if(idx < 0) return;
+
+  const t = state.tasks[idx];
+  if(t.done) return;
+
+  log.group("WorkflowOS.markTaskDone()");
+  log.debug("task", t);
+
+  t.done = true;
+
+  if(t.producesEvidence){
+    const ev = {
+      id: uid("EV"),
+      type: t.producesEvidence.type,
+      title: t.producesEvidence.title,
+      payload: t.producesEvidence.payload || {},
+      ts: nowIso()
+    };
+    state.evidence.push(ev);
+    log.info("Produced evidence", ev);
+  } else {
+    // still produce a generic trace note so the UI feels responsive
+    const ev = {
+      id: uid("EV"),
+      type: "trace",
+      title: `Task completed: ${t.title}`,
+      payload: { linkedTo: ["(ops)"] },
+      ts: nowIso()
+    };
+    state.evidence.push(ev);
+    log.debug("Produced trace evidence", ev);
+  }
+
+  log.groupEnd();
+  renderAll();
+}
+
+// ---------- Render ----------
+function renderDecisionPack(dp){
+  if(!dp){
+    UI.decisionPackView.innerHTML = `<div class="muted">Compile to generate Decision Pack v0.</div>`;
+    return;
+  }
+
+  const gapHtml = dp.gaps.length
+    ? `<ul class="list">${dp.gaps.map(g => `<li>${g.gap}<span class="tag">${g.severity}</span></li>`).join("")}</ul>`
+    : `<div class="muted">No gaps flagged.</div>`;
+
+  const landscapeHtml = `<ul class="list">${dp.landscapeSnapshot.map(x => `<li><b>${x.category}</b>: ${x.note}</li>`).join("")}</ul>`;
+
+  const sauceHtml = `<ul class="list">${dp.secretSauceHypothesisMap.map(x =>
+    `<li><b>${x.claim}</b><br/><span class="muted">Proof needed:</span> ${x.proofNeeded}</li>`).join("")}</ul>`;
+
+  const riskHtml = `<ul class="list">${dp.riskRegister.map(r =>
+    `<li><b>${r.id}</b> ${r.risk}<br/><span class="muted">Mitigation:</span> ${r.mitigation} <span class="tag">${r.status}</span></li>`).join("")}</ul>`;
+
+  const planHtml = `<ul class="list">${dp.evidencePlan.map(e =>
+    `<li><b>${e.id}</b> ${e.task} <span class="muted">(${e.owner}, ${e.due})</span></li>`).join("")}</ul>`;
+
+  const idxHtml = dp.evidenceIndex.length
+    ? `<ul class="list">${dp.evidenceIndex.map(e => `<li><span class="mono">${e.type}</span> — ${e.title}<br/><span class="muted">Linked to:</span> ${e.linkedTo.join(", ")}</li>`).join("")}</ul>`
+    : `<div class="muted">No receipts yet. Rubrics will generate tasks.</div>`;
+
+  UI.decisionPackView.innerHTML = `
+    <div class="section">
+      <h3><span>Meta</span><span class="pill mono">v${dp.meta.version}</span></h3>
+      <div class="kv"><div class="k">One-liner</div><div class="v">${escapeHtml(dp.meta.oneLiner)}</div></div>
+      <div class="kv"><div class="k">ICP</div><div class="v">${escapeHtml(dp.meta.icp)}</div></div>
+      <div class="kv"><div class="k">Compiled</div><div class="v mono">${dp.meta.compiledAt}</div></div>
+    </div>
+
+    <div class="section">
+      <h3><span>Landscape Snapshot</span><span class="pill">4 buckets</span></h3>
+      ${landscapeHtml}
+    </div>
+
+    <div class="section">
+      <h3><span>Secret Sauce Hypothesis Map</span><span class="pill">hypotheses</span></h3>
+      ${sauceHtml}
+    </div>
+
+    <div class="section">
+      <h3><span>Risk Register</span><span class="pill">${dp.riskRegister.length} risks</span></h3>
+      ${riskHtml}
+    </div>
+
+    <div class="section">
+      <h3><span>Evidence Plan</span><span class="pill">${dp.evidencePlan.length} tasks</span></h3>
+      ${planHtml}
+    </div>
+
+    <div class="section">
+      <h3><span>Evidence Index (Receipts)</span><span class="pill">${dp.evidenceIndex.length} items</span></h3>
+      ${idxHtml}
+    </div>
+
+    <div class="section">
+      <h3><span>Compiler Gaps</span><span class="pill">${dp.gaps.length} flagged</span></h3>
+      ${gapHtml}
+    </div>
+  `;
+}
+
+function renderRubric(rubric){
+  if(!rubric){
+    UI.rubricView.innerHTML = `<div class="muted">Run rubrics after compiling.</div>`;
+    return;
+  }
+  UI.rubricView.innerHTML = `
+    <div class="section">
+      <h3><span>Summary</span><span class="pill ${rubric.gate === "PASS" ? "good" : "bad"}">${rubric.gate}</span></h3>
+      <div class="kv"><div class="k">Total score</div><div class="v"><b>${rubric.totalScore}</b> / 100</div></div>
+      <div class="kv"><div class="k">Blockers</div><div class="v"><b>${rubric.blockers}</b></div></div>
+      <div class="kv"><div class="k">Scored at</div><div class="v mono">${rubric.scoredAt}</div></div>
+      <div class="hr"></div>
+      <div class="tiny">Checks</div>
+      <ul class="list">
+        ${rubric.checks.map(c => `<li><b>${c.key}</b>: ${c.score}/${c.max} — <span class="muted">${escapeHtml(c.note)}</span></li>`).join("")}
+      </ul>
+    </div>
+  `;
+}
+
+function renderTasks(){
+  if(!state.tasks.length){
+    UI.tasksView.innerHTML = `<div class="muted">No tasks yet. Compile then run rubrics.</div>`;
+    return;
+  }
+
+  UI.tasksView.innerHTML = state.tasks.map(t => {
+    const cls = `task ${t.done ? "done" : ""} ${t.severity === "blocker" ? "blocker" : ""}`;
+    const sev = t.severity === "blocker" ? `<span class="pill bad">blocker</span>` : `<span class="pill">task</span>`;
+    const ev = t.producesEvidence ? `<span class="pill warn">produces evidence</span>` : `<span class="pill">ops</span>`;
+    return `
+      <div class="${cls}">
+        <div class="top">
+          <div>
+            <div class="name">${escapeHtml(t.title)}</div>
+            <div class="meta">${sev} ${ev} ${t.done ? `<span class="pill good">done</span>` : ""}</div>
+          </div>
+          <div class="actions">
+            <button ${t.done ? "disabled" : ""} onclick="markTaskDone('${t.id}')">Mark done</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderHistory(){
+  UI.historyCount.textContent = String(state.history.length);
+  if(!state.history.length){
+    UI.historyView.innerHTML = `<div class="muted">No versions yet.</div>`;
+    return;
+  }
+  UI.historyView.innerHTML = `
+    <ul class="list">
+      ${state.history.slice().reverse().map(h => `
+        <li>
+          <b class="mono">v${h.version}</b> — <span class="muted mono">${h.ts}</span><br/>
+          <span class="muted">${escapeHtml(h.summary)}</span>
+        </li>
+      `).join("")}
+    </ul>
+  `;
+}
+
+function renderTopPills(){
+  // version pill
+  const v = state.version;
+  const compiled = state.compiled;
+  const vTone = compiled ? (state.forwardable === true ? "good" : (state.forwardable === false ? "warn" : "")) : "";
+  setPill(UI.versionPill, `<b class="mono">v${v}</b> • ${compiled ? "compiled" : "not compiled"}`, vTone);
+
+  // evidence count
+  UI.evidenceCount.textContent = String(state.evidence.length);
+
+  // forwardable
+  if(state.forwardable === true) setPill(UI.forwardablePill, `Forwardable: <b>yes</b>`, "good");
+  else if(state.forwardable === false) setPill(UI.forwardablePill, `Forwardable: <b>not yet</b>`, "warn");
+  else setPill(UI.forwardablePill, `Forwardable: <b>unknown</b>`);
+
+  // score
+  if(state.score != null) setPill(UI.scorePill, `Score: <b>${state.score}</b>`, state.score >= 75 ? "good" : "warn");
+  else setPill(UI.scorePill, `Score: <b>—</b>`);
+
+  // gate
+  if(state.rubric?.gate) setPill(UI.gatePill, `Gate: <b>${state.rubric.gate}</b>`, state.rubric.gate === "PASS" ? "good" : "bad");
+  else setPill(UI.gatePill, `Gate: <b>—</b>`);
+
+  // rubrics status
+  setPill(UI.rubricPill, `Rubrics: <b>${state.rubric ? "run" : "not run"}</b>`, state.rubric ? (state.rubric.gate === "PASS" ? "good" : "warn") : "");
+}
+
+// Basic HTML escaping for content
+function escapeHtml(str){
+  return String(str ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function renderAll(){
+  renderTopPills();
+  renderDecisionPack(state.decisionPack);
+  renderRubric(state.rubric);
+  renderTasks();
+  renderHistory();
+}
+
+// ---------- Event handlers ----------
+function getInputs(){
+  return {
+    oneLiner: UI.oneLiner.value,
+    icp: UI.icp.value,
+    deck: UI.deck.value,
+    transcript: UI.transcript.value,
+    metrics: UI.metrics.value,
+    competitors: UI.competitors.value
+  };
+}
+
+function compile(){
+  const inputs = getInputs();
+  log.group(`=== Compile → v${state.version} ===`);
+  state.compiled = true;
+
+  state.decisionPack = compileDecisionPack(inputs);
+
+  // record history
+  const summary = summarizePack(state.decisionPack);
+  state.history.push({ version: state.version, ts: nowIso(), summary });
+
+  // on compile, reset forwardable until rubrics rerun
+  state.forwardable = "unknown";
+  state.score = null;
+  state.rubric = null;
+  state.tasks = [];
+
+  log.info("Compiled Decision Pack", { version: state.version, summary });
+  log.groupEnd();
+
+  renderAll();
+}
+
+function runRubricsBtn(){
+  if(!state.decisionPack){
+    log.warn("Run rubrics: no Decision Pack yet. Compile first.");
+    return;
+  }
+
+  const { rubric, tasks } = runRubrics(state.decisionPack);
+  state.rubric = rubric;
+  state.score = rubric.totalScore;
+  state.forwardable = rubric.gate === "PASS";
+  state.tasks = tasks;
+
+  log.info("Rubrics complete", { score: state.score, gate: rubric.gate, tasks: tasks.length });
+
+  renderAll();
+}
+
+function reset(){
+  log.info("Reset demo");
+  state.version = 0;
+  state.compiled = false;
+  state.forwardable = "unknown";
+  state.score = null;
+  state.evidence = [];
+  state.tasks = [];
+  state.history = [];
+  state.decisionPack = null;
+  state.rubric = null;
+
+  // reset inputs
+  UI.oneLiner.value = MOCK.oneLiner;
+  UI.icp.value = MOCK.icp;
+  UI.deck.value = MOCK.deck;
+  UI.transcript.value = MOCK.transcript;
+  UI.metrics.value = MOCK.metrics;
+  UI.competitors.value = MOCK.competitors;
+
+  renderAll();
+}
+
+UI.btnCompile.addEventListener("click", () => {
+  // increment version each time AFTER first compile
+  if(state.compiled) state.version += 1;
+  compile();
+});
+
+UI.btnRunRubrics.addEventListener("click", runRubricsBtn);
+
+UI.btnReset.addEventListener("click", reset);
+
+// Boot
+reset();
+
+// expose for inline onclick
+window.markTaskDone = markTaskDone;
+</script>
+</body>
+</html>

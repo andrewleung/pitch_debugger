@@ -1,0 +1,930 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Flow 2 Demo — Diligence Deepens (Investor Qs → Evidence Plan → Recompile)</title>
+  <style>
+    :root{
+      --bg:#0b1020; --panel:#0f1733; --panel2:#0c1430; --border:#243058;
+      --text:#e8ecff; --muted:#a9b4e6; --good:#38d39f; --warn:#ffd166; --bad:#ff6b6b; --accent:#7aa2ff;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:var(--sans); color:var(--text);
+      background:linear-gradient(180deg,#070b17 0%, #0b1020 45%, #060916 100%);
+    }
+    header{
+      padding:16px 20px; border-bottom:1px solid var(--border);
+      background:rgba(15,23,51,0.65); backdrop-filter: blur(8px);
+      position:sticky; top:0; z-index:5;
+      display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+    }
+    header h1{ margin:0; font-size:16px; letter-spacing:0.2px;}
+    header .sub{ color:var(--muted); font-size:12px; max-width:900px;}
+    .wrap{ padding:16px 20px 24px; max-width:1380px; margin:0 auto;}
+    .grid{ display:grid; grid-template-columns: 1.05fr 0.95fr; gap:14px; }
+    @media (max-width: 980px){ .grid{ grid-template-columns: 1fr; } }
+    .card{
+      border:1px solid var(--border); border-radius:14px; background:rgba(15,23,51,0.55);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.25); overflow:hidden;
+    }
+    .card .hd{
+      padding:12px 14px; border-bottom:1px solid var(--border);
+      display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+      background:linear-gradient(180deg, rgba(122,162,255,0.08), rgba(15,23,51,0.0));
+    }
+    .card .hd .title{ font-weight:700; font-size:13px; }
+    .card .hd .hint{ color:var(--muted); font-size:12px; }
+    .card .bd{ padding:12px 14px; }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    button{
+      border:1px solid var(--border); background:#101a3a; color:var(--text);
+      padding:9px 10px; border-radius:10px; cursor:pointer; font-weight:650; font-size:12px;
+    }
+    button:hover{ border-color:#32407a; background:#0f1a3f; }
+    button.primary{ border-color: rgba(122,162,255,0.7); box-shadow:0 0 0 2px rgba(122,162,255,0.12) inset; }
+    button.danger{ border-color: rgba(255,107,107,0.75); }
+    button:disabled{ opacity:0.55; cursor:not-allowed; }
+    textarea, input, select{
+      width:100%; border-radius:12px; border:1px solid var(--border);
+      background:rgba(12,20,48,0.75); color:var(--text);
+      padding:10px 10px; font-size:12px; outline:none;
+    }
+    textarea{ min-height:90px; resize:vertical; font-family:var(--mono); line-height:1.35; }
+    .pill{
+      display:inline-flex; align-items:center; gap:6px;
+      padding:4px 8px; border-radius:999px;
+      border:1px solid var(--border); background:rgba(12,20,48,0.8);
+      font-size:11px; color:var(--muted);
+    }
+    .pill b{ color:var(--text); font-weight:800; }
+    .pill.good{ border-color: rgba(56,211,159,0.5); }
+    .pill.warn{ border-color: rgba(255,209,102,0.6); }
+    .pill.bad{ border-color: rgba(255,107,107,0.55); }
+    .mono{ font-family:var(--mono); }
+    .muted{ color:var(--muted); }
+    .tiny{ font-size:11px; color:var(--muted); }
+    .section{
+      border:1px solid rgba(36,48,88,0.75); background:rgba(12,20,48,0.45);
+      border-radius:12px; padding:10px; margin:10px 0;
+    }
+    .section h3{ margin:0 0 6px; font-size:12px; display:flex; align-items:center; justify-content:space-between; gap:10px;}
+    .list{ margin:6px 0 0; padding-left:16px; }
+    .list li{ margin:4px 0; font-size:12px; }
+    .kv{ display:grid; grid-template-columns: 170px 1fr; gap:8px; margin:4px 0; }
+    .kv .k{ color:var(--muted); font-size:11px; }
+    .kv .v{ font-size:12px; }
+    .task{
+      border:1px solid var(--border); background:rgba(12,20,48,0.55);
+      border-radius:12px; padding:10px; margin:8px 0;
+    }
+    .task .top{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+    .task .name{ font-weight:800; font-size:12px; }
+    .task .meta{ color:var(--muted); font-size:11px; margin-top:2px; }
+    .task.done{ border-color: rgba(56,211,159,0.45); }
+    .task.blocker{ border-color: rgba(255,107,107,0.55); }
+    .q{
+      border:1px solid var(--border); background:rgba(12,20,48,0.5);
+      border-radius:12px; padding:10px; margin:8px 0;
+    }
+    .q .t{ font-weight:800; font-size:12px; }
+    .q .m{ color:var(--muted); font-size:11px; margin-top:2px; }
+    .hr{ height:1px; background:var(--border); margin:12px 0; opacity:0.85; }
+    .rightcol{ display:grid; grid-template-rows:auto auto 1fr; gap:14px;}
+    .codechip{
+      padding:6px 8px; border-radius:10px; background:rgba(12,20,48,0.7); border:1px solid var(--border);
+      font-family:var(--mono); font-size:11px; color:var(--text); display:inline-flex; align-items:center; gap:8px;
+    }
+    .badge{
+      display:inline-block; font-size:10px; padding:2px 6px; border-radius:8px; margin-left:8px;
+      border:1px dashed rgba(255,209,102,0.7); color:var(--warn);
+      vertical-align:middle;
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Flow 2 Demo: Diligence Deepens → Investor Questions → Evidence Plan → Recompile</h1>
+    <div class="sub">
+      This single-file demo simulates: <b>Investor/Partner diligence questions</b> → <b>Workflow OS</b> converts them into a risk/evidence plan →
+      team produces receipts → <b>Pitch Debugger</b> recompiles a more forwardable <b>Decision Pack</b>.
+      Open DevTools → Console for trace logs.
+    </div>
+  </div>
+  <div class="row">
+    <span class="pill mono" id="versionPill"><b>v0</b> • not compiled</span>
+    <span class="pill" id="forwardablePill">Forwardable: <b>unknown</b></span>
+    <span class="pill mono" id="scorePill">Score: <b>—</b></span>
+    <button class="primary" id="btnCompile">Recompile Pack</button>
+    <button id="btnRunRubrics">Run Rubrics</button>
+    <button class="danger" id="btnReset">Reset</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="grid">
+    <!-- LEFT: DILIGENCE INBOX + TASKS + EVIDENCE -->
+    <div class="card">
+      <div class="hd">
+        <div>
+          <div class="title">Diligence Inbox → Workflow OS (Question-to-Plan)</div>
+          <div class="hint">Add questions, then <span class="codechip">Generate Plan</span> → tasks appear. Complete tasks → recompile.</div>
+        </div>
+        <div class="row">
+          <span class="pill" id="qPill">Questions: <b id="qCount">0</b></span>
+          <span class="pill" id="taskPill">Tasks: <b id="taskCount">0</b></span>
+          <span class="pill" id="evPill">Evidence: <b id="evCount">0</b></span>
+        </div>
+      </div>
+      <div class="bd">
+        <div class="section">
+          <h3>
+            <span>Investor Questions</span>
+            <span class="row">
+              <button id="btnSeedQs">Seed example Qs</button>
+              <button class="primary" id="btnGeneratePlan">Generate Evidence Plan</button>
+            </span>
+          </h3>
+
+          <div class="tiny">Add from templates</div>
+          <div class="row" style="margin-top:6px;">
+            <select id="selTemplate" style="flex:1; min-width:280px;"></select>
+            <button id="btnAddTemplate">Add Question</button>
+          </div>
+
+          <div class="tiny" style="margin-top:10px;">Or write your own</div>
+          <div class="row" style="margin-top:6px;">
+            <input id="inpNewQ" placeholder="e.g., What would make this defensible vs a fast follower? What proof do you have today?" />
+            <button id="btnAddCustom">Add</button>
+          </div>
+
+          <div id="qList" style="margin-top:10px;"></div>
+        </div>
+
+        <div class="section">
+          <h3>
+            <span>Workflow OS Tasks (from Qs + rubrics)</span>
+            <span class="pill" id="planPill">Plan: <b>not generated</b></span>
+          </h3>
+          <div id="taskList"></div>
+        </div>
+
+        <div class="section">
+          <h3><span>Evidence Vault (receipts produced)</span><span class="pill mono" id="vaultPill"><b>JSON</b> view</span></h3>
+          <textarea id="txtEvidence" readonly></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: DECISION PACK + RUBRICS + HISTORY -->
+    <div class="rightcol">
+      <div class="card">
+        <div class="hd">
+          <div>
+            <div class="title">Decision Pack (canonical artifact)</div>
+            <div class="hint">Watch the <b>Diligence Q&amp;A</b>, <b>Risk Register</b>, and <b>Evidence Index</b> evolve as questions deepen.</div>
+          </div>
+          <div class="row">
+            <span class="pill" id="dpStatusPill">Status: <b>draft</b></span>
+          </div>
+        </div>
+        <div class="bd" id="dpView">
+          <div class="muted">Generate plan → Recompile to render the updated Decision Pack.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd">
+          <div>
+            <div class="title">Rubrics (underwriting gate)</div>
+            <div class="hint">Simple scoring: answered Qs, evidence coverage, risk mitigations, ICP clarity.</div>
+          </div>
+          <div class="row">
+            <span class="pill" id="gatePill">Gate: <b>—</b></span>
+          </div>
+        </div>
+        <div class="bd" id="rubricView">
+          <div class="muted">Run rubrics after compiling.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd">
+          <div>
+            <div class="title">Version History</div>
+            <div class="hint">Each recompile produces a new version entry (delta-friendly).</div>
+          </div>
+          <div class="row">
+            <span class="pill" id="histPill">Entries: <b id="histCount">0</b></span>
+          </div>
+        </div>
+        <div class="bd" id="histView">
+          <div class="muted">No versions yet.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/**
+ * Flow 2 Demo:
+ * Investor questions -> Workflow OS converts to plan (tasks, risks, evidence requests) -> complete tasks -> recompile -> pack more forwardable
+ * Debug: open DevTools console.
+ */
+
+const log = {
+  info: (...a) => console.info("[flow2]", ...a),
+  debug: (...a) => console.debug("[flow2]", ...a),
+  warn: (...a) => console.warn("[flow2]", ...a),
+  group: (label) => console.group(label),
+  groupEnd: () => console.groupEnd(),
+};
+
+const uid = (p) => `${p}_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`;
+const nowIso = () => new Date().toISOString();
+const escapeHtml = (str) => String(str ?? "")
+  .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+  .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+
+const TEMPLATES = [
+  { id:"Q1", topic:"Differentiation", text:"What exactly is defensible here vs a fast follower, and what’s the crisp novelty delta?" },
+  { id:"Q2", topic:"Evidence", text:"What evidence do you have today that a buyer will pay, not just say it’s interesting?" },
+  { id:"Q3", topic:"Market", text:"Why now—what changed in the market or tech that makes this inevitable this year?" },
+  { id:"Q4", topic:"Risks", text:"What are the top 3 risks that could kill this in 90 days, and how do you bound them?" },
+  { id:"Q5", topic:"GTM", text:"How do you get your first 10 paying customers, and what’s the cheapest proof path?" },
+  { id:"Q6", topic:"Competition", text:"Who is closest to you today, and what stops them from adding this feature?" },
+  { id:"Q7", topic:"Unit economics", text:"What’s the pricing model and what drives retention—why wouldn’t this be a one-off purchase?" },
+  { id:"Q8", topic:"Process", text:"How do you standardize quality so it’s underwritable—not just bespoke consulting?" },
+];
+
+const BASE = {
+  oneLiner: "Pitch Debugger compiles a forwardable Decision Pack (evidence, risks, options) from founder inputs, so diligence gets faster and more verifiable.",
+  icp: "Pre-seed / seed founders + small investor groups who need a standardized internal-forward underwriting packet.",
+  landscape: [
+    { category:"AI deck builders", note:"High persuasion, low verification" },
+    { category:"Consultants", note:"High customization, expensive" },
+    { category:"Templates", note:"Flexible but ungated / non-verifiable" },
+    { category:"IP tools", note:"Prior art focus; not underwriting pack" }
+  ],
+  secretSauce: [
+    { claim:"Underwriting-first artifact vs polish-first deck", proofNeeded:"forward-rate; diligence time reduction" },
+    { claim:"Rubric gates generate concrete evidence tasks", proofNeeded:"rubric improvement vs baseline" },
+  ],
+  risks: [
+    { id:"R1", risk:"Pack looks credible but isn’t verifiable yet", mitigation:"Evidence index + rubric gates", status:"open" },
+    { id:"R2", risk:"Buyer unclear (founder vs investor vs attorney)", mitigation:"ICP tests and pricing experiments", status:"open" },
+  ],
+};
+
+const state = {
+  version: 0,
+  compiled: false,
+  dp: null,
+  rubric: null,
+  score: null,
+  forwardable: "unknown",
+
+  questions: [], // {id, text, topic, addedAt, status, answerEvidenceIds:[]}
+  tasks: [],     // {id, title, severity, done, fromQId, producesEvidence:{...}}
+  evidence: [],  // {id, type, title, payload, ts}
+  history: [],   // {version, ts, summary}
+};
+
+const el = (id) => document.getElementById(id);
+
+const UI = {
+  versionPill: el("versionPill"),
+  forwardablePill: el("forwardablePill"),
+  scorePill: el("scorePill"),
+  gatePill: el("gatePill"),
+  dpStatusPill: el("dpStatusPill"),
+
+  qCount: el("qCount"),
+  taskCount: el("taskCount"),
+  evCount: el("evCount"),
+  histCount: el("histCount"),
+
+  btnCompile: el("btnCompile"),
+  btnRunRubrics: el("btnRunRubrics"),
+  btnReset: el("btnReset"),
+
+  btnSeedQs: el("btnSeedQs"),
+  btnGeneratePlan: el("btnGeneratePlan"),
+  selTemplate: el("selTemplate"),
+  btnAddTemplate: el("btnAddTemplate"),
+  inpNewQ: el("inpNewQ"),
+  btnAddCustom: el("btnAddCustom"),
+
+  qList: el("qList"),
+  taskList: el("taskList"),
+  txtEvidence: el("txtEvidence"),
+
+  planPill: el("planPill"),
+  dpView: el("dpView"),
+  rubricView: el("rubricView"),
+  histView: el("histView"),
+};
+
+function setPill(pillEl, html, tone){
+  pillEl.classList.remove("good","warn","bad");
+  if(tone) pillEl.classList.add(tone);
+  pillEl.innerHTML = html;
+}
+
+function initTemplateSelect(){
+  UI.selTemplate.innerHTML = TEMPLATES.map(t => `<option value="${t.id}">${t.topic}: ${escapeHtml(t.text.slice(0,80))}${t.text.length>80?"…":""}</option>`).join("");
+}
+
+// ---------- Core: Workflow OS turns Qs into plan ----------
+function classifyTopic(text){
+  const t = text.toLowerCase();
+  if(t.includes("defensible") || t.includes("novelty") || t.includes("fast follower")) return "Differentiation";
+  if(t.includes("evidence") || t.includes("proof") || t.includes("today")) return "Evidence";
+  if(t.includes("why now") || t.includes("changed")) return "WhyNow";
+  if(t.includes("risk") || t.includes("kill")) return "Risks";
+  if(t.includes("first 10") || t.includes("customers") || t.includes("gtm")) return "GTM";
+  if(t.includes("competition") || t.includes("closest") || t.includes("stops them")) return "Competition";
+  if(t.includes("pricing") || t.includes("retention") || t.includes("one-off")) return "UnitEcon";
+  if(t.includes("standardize") || t.includes("quality") || t.includes("bespoke")) return "Process";
+  return "General";
+}
+
+function generatePlanFromQuestions(questions){
+  log.group("WorkflowOS.generatePlanFromQuestions()");
+  log.debug("questions", questions);
+
+  const tasks = [];
+  for(const q of questions){
+    // only plan for unanswered questions
+    if(q.status === "answered") continue;
+
+    const topic = q.topic || classifyTopic(q.text);
+    const qid = q.id;
+
+    // heuristics: map topic -> task + evidence object shape
+    if(topic === "Differentiation"){
+      tasks.push({
+        id: uid("T"),
+        title: "Write a crisp ‘novelty delta’ paragraph + 2 design-around threats",
+        severity: "blocker",
+        done:false,
+        fromQId: qid,
+        producesEvidence: { type:"memo", title:"Novelty delta memo (mock)", payload:{ linkedTo:["Defensibility"], answersQ:q.text } }
+      });
+    } else if(topic === "Evidence"){
+      tasks.push({
+        id: uid("T"),
+        title: "Add 2 receipts: founder interview notes + willingness-to-pay signal",
+        severity: "blocker",
+        done:false,
+        fromQId: qid,
+        producesEvidence: { type:"receipt", title:"WTP signal (mock)", payload:{ linkedTo:["Paying proof"], answersQ:q.text } }
+      });
+    } else if(topic === "WhyNow"){
+      tasks.push({
+        id: uid("T"),
+        title: "Document ‘Why Now’ (market/tech shift) + 1 supporting data point",
+        severity: "normal",
+        done:false,
+        fromQId: qid,
+        producesEvidence: { type:"note", title:"Why Now note (mock)", payload:{ linkedTo:["Timing"], answersQ:q.text } }
+      });
+    } else if(topic === "Risks"){
+      tasks.push({
+        id: uid("T"),
+        title: "Add top 3 risks with 90-day mitigation experiments",
+        severity: "blocker",
+        done:false,
+        fromQId: qid,
+        producesEvidence: { type:"plan", title:"90-day risk-mitigation plan (mock)", payload:{ linkedTo:["Risk bounds"], answersQ:q.text } }
+      });
+    } else if(topic === "GTM"){
+      tasks.push({
+        id: uid("T"),
+        title: "Draft first-10-customer plan (channels + script) + cost-per-lead estimate",
+        severity: "normal",
+        done:false,
+        fromQId: qid,
+        producesEvidence: { type:"plan", title:"First-10-customer GTM plan (mock)", payload:{ linkedTo:["GTM"], answersQ:q.text } }
+      });
+    } else if(topic === "Competition"){
+      tasks.push({
+        id: uid("T"),
+        title: "Add competitor adjacency table + ‘why we win’ bullets",
+        severity: "normal",
+        done:false,
+        fromQId: qid,
+        producesEvidence: { type:"table", title:"Competitor adjacency table (mock)", payload:{ linkedTo:["Competition"], answersQ:q.text } }
+      });
+    } else if(topic === "UnitEcon"){
+      tasks.push({
+        id: uid("T"),
+        title: "Define pricing + retention mechanism + churn risk countermeasure",
+        severity: "normal",
+        done:false,
+        fromQId: qid,
+        producesEvidence: { type:"model", title:"Pricing & retention model (mock)", payload:{ linkedTo:["Unit economics"], answersQ:q.text } }
+      });
+    } else if(topic === "Process"){
+      tasks.push({
+        id: uid("T"),
+        title: "Describe standardization mechanism (rubrics, gates, templates) + QA loop",
+        severity: "normal",
+        done:false,
+        fromQId: qid,
+        producesEvidence: { type:"spec", title:"Standardization/QA spec (mock)", payload:{ linkedTo:["Scalability"], answersQ:q.text } }
+      });
+    } else {
+      tasks.push({
+        id: uid("T"),
+        title: "Write a short answer + attach one supporting receipt",
+        severity: "normal",
+        done:false,
+        fromQId: qid,
+        producesEvidence: { type:"note", title:"Diligence answer note (mock)", payload:{ linkedTo:["General"], answersQ:q.text } }
+      });
+    }
+  }
+
+  // dedupe by title
+  const seen = new Set();
+  const deduped = tasks.filter(t => (seen.has(t.title) ? false : (seen.add(t.title), true)));
+
+  log.debug("generated tasks", deduped);
+  log.groupEnd();
+  return deduped;
+}
+
+// ---------- Evidence production ----------
+function produceEvidenceFromTask(task){
+  const ev = {
+    id: uid("EV"),
+    type: task.producesEvidence?.type || "trace",
+    title: task.producesEvidence?.title || `Task completed: ${task.title}`,
+    payload: task.producesEvidence?.payload || { linkedTo:["(ops)"], answersQ: null },
+    ts: nowIso()
+  };
+  state.evidence.push(ev);
+  return ev;
+}
+
+function markTaskDone(taskId){
+  const t = state.tasks.find(x => x.id === taskId);
+  if(!t || t.done) return;
+
+  log.group("WorkflowOS.markTaskDone()");
+  log.debug("task", t);
+  t.done = true;
+  const ev = produceEvidenceFromTask(t);
+  log.info("Produced evidence", ev);
+
+  // mark linked question as answered (simple heuristic: any blocker done answers it)
+  const q = state.questions.find(q => q.id === t.fromQId);
+  if(q){
+    q.answerEvidenceIds.push(ev.id);
+    // if all tasks for that question are done, mark answered
+    const remainingForQ = state.tasks.filter(x => x.fromQId === q.id && !x.done).length;
+    if(remainingForQ === 0){
+      q.status = "answered";
+      log.info("Question answered", { qid: q.id, text: q.text });
+    } else {
+      q.status = "in_progress";
+    }
+  }
+
+  log.groupEnd();
+  renderAll();
+}
+
+// ---------- Pitch Debugger Recompile (integrate evidence + Q&A) ----------
+function recompileDecisionPack(){
+  log.group(`PitchDebugger.recompileDecisionPack() v${state.version}`);
+  const answeredCount = state.questions.filter(q => q.status === "answered").length;
+
+  const evidenceIndex = state.evidence.map(e => ({
+    id: e.id, type: e.type, title: e.title,
+    linkedTo: e.payload?.linkedTo || ["(unlinked)"],
+    answersQ: e.payload?.answersQ || null,
+    ts: e.ts
+  }));
+
+  const qa = state.questions.map(q => ({
+    id: q.id,
+    topic: q.topic,
+    question: q.text,
+    status: q.status,
+    evidenceRefs: q.answerEvidenceIds.slice()
+  }));
+
+  // Update risk register based on whether risks-related evidence exists
+  const riskRegister = BASE.risks.map(r => ({...r}));
+  const hasRiskPlan = state.evidence.some(e => (e.type === "plan" && (e.title || "").toLowerCase().includes("risk")));
+  if(hasRiskPlan){
+    const r1 = riskRegister.find(r => r.id === "R1");
+    if(r1) r1.status = "mitigating";
+  }
+
+  // Gaps: unanswered questions and low receipts
+  const gaps = [];
+  const unanswered = state.questions.filter(q => q.status !== "answered").length;
+  if(unanswered > 0) gaps.push({ id:"GQ", gap:`${unanswered} diligence questions still unanswered`, severity:"blocker" });
+  if(evidenceIndex.length < Math.min(4, state.questions.length * 1)) gaps.push({ id:"GE", gap:"Evidence coverage is still thin relative to diligence depth", severity:"blocker" });
+  if(!BASE.icp || BASE.icp.length < 10) gaps.push({ id:"GI", gap:"ICP unclear", severity:"warn" });
+
+  const dp = {
+    meta: {
+      id: uid("DP"),
+      compiledAt: nowIso(),
+      version: state.version,
+      title: "Decision Pack — Diligence Deepening (Demo)",
+      oneLiner: BASE.oneLiner,
+      icp: BASE.icp
+    },
+    landscapeSnapshot: BASE.landscape,
+    secretSauceHypothesisMap: BASE.secretSauce,
+    riskRegister,
+    diligenceQA: qa,
+    evidenceIndex,
+    gaps,
+    stats: {
+      questionsTotal: state.questions.length,
+      questionsAnswered: answeredCount,
+      evidenceItems: state.evidence.length,
+      tasksDone: state.tasks.filter(t => t.done).length,
+      tasksTotal: state.tasks.length
+    }
+  };
+
+  log.debug("compiled DP", dp);
+  log.groupEnd();
+  return dp;
+}
+
+// ---------- Rubrics ----------
+function runRubrics(dp){
+  log.group("WorkflowOS.runRubrics()");
+  const checks = [];
+  let score = 0;
+
+  const qTotal = dp.stats.questionsTotal;
+  const qAns = dp.stats.questionsAnswered;
+  const qaScore = qTotal === 0 ? 0 : Math.round(35 * (qAns / qTotal));
+  score += qaScore;
+  checks.push({ key:"Diligence Qs Answered", score:qaScore, max:35, note:`${qAns}/${qTotal} answered` });
+
+  const receipts = dp.evidenceIndex.length;
+  const evidenceScore = Math.min(30, receipts * 6); // 0..30
+  score += evidenceScore;
+  checks.push({ key:"Evidence Coverage", score:evidenceScore, max:30, note:`Receipts: ${receipts}` });
+
+  const risks = dp.riskRegister.length;
+  const mitigated = dp.riskRegister.filter(r => r.status !== "open").length;
+  const riskScore = Math.min(20, 10 + mitigated * 5); // baseline 10 + mitigation credit
+  score += riskScore;
+  checks.push({ key:"Risk Mitigation", score:riskScore, max:20, note:`Mitigating: ${mitigated}/${risks}` });
+
+  const icpScore = dp.meta.icp && dp.meta.icp.length > 25 ? 15 : (dp.meta.icp ? 8 : 0);
+  score += icpScore;
+  checks.push({ key:"ICP Clarity", score:icpScore, max:15, note: dp.meta.icp ? "ICP present" : "Missing ICP" });
+
+  const blockers = dp.gaps.filter(g => g.severity === "blocker").length;
+  const gate = (score >= 80) && (blockers === 0) ? "PASS" : "FAIL";
+
+  const rubric = { scoredAt: nowIso(), totalScore: score, gate, blockers, checks };
+  log.debug("rubric", rubric);
+  log.groupEnd();
+  return rubric;
+}
+
+// ---------- UI render ----------
+function renderQuestions(){
+  UI.qCount.textContent = String(state.questions.length);
+  if(state.questions.length === 0){
+    UI.qList.innerHTML = `<div class="muted">No questions yet. Add templates or seed examples.</div>`;
+    return;
+  }
+  UI.qList.innerHTML = state.questions.map(q => {
+    const tone = q.status === "answered" ? "good" : (q.status === "in_progress" ? "warn" : "");
+    const statusLabel = q.status === "answered" ? "answered" : (q.status === "in_progress" ? "in progress" : "new");
+    return `
+      <div class="q">
+        <div class="t">${escapeHtml(q.text)}</div>
+        <div class="m">
+          <span class="pill ${tone}">topic: <b>${escapeHtml(q.topic)}</b></span>
+          <span class="pill ${tone}">status: <b>${statusLabel}</b></span>
+          <span class="pill">evidence refs: <b>${q.answerEvidenceIds.length}</b></span>
+          <button style="float:right" onclick="removeQuestion('${q.id}')">Remove</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderTasks(){
+  UI.taskCount.textContent = String(state.tasks.length);
+  if(state.tasks.length === 0){
+    UI.taskList.innerHTML = `<div class="muted">Generate an evidence plan to create tasks.</div>`;
+    return;
+  }
+  UI.taskList.innerHTML = state.tasks.map(t => {
+    const cls = `task ${t.done ? "done" : ""} ${t.severity === "blocker" ? "blocker" : ""}`;
+    const sev = t.severity === "blocker" ? `<span class="pill bad">blocker</span>` : `<span class="pill">task</span>`;
+    const done = t.done ? `<span class="pill good">done</span>` : "";
+    return `
+      <div class="${cls}">
+        <div class="top">
+          <div>
+            <div class="name">${escapeHtml(t.title)}</div>
+            <div class="meta">
+              ${sev} ${done}
+              <span class="pill">from Q: <b class="mono">${escapeHtml(shortId(t.fromQId))}</b></span>
+            </div>
+          </div>
+          <div class="row">
+            <button ${t.done ? "disabled" : ""} onclick="markTaskDone('${t.id}')">Mark done</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderEvidence(){
+  UI.evCount.textContent = String(state.evidence.length);
+  UI.txtEvidence.value = JSON.stringify(state.evidence, null, 2);
+}
+
+function renderDecisionPack(){
+  if(!state.dp){
+    UI.dpView.innerHTML = `<div class="muted">Generate plan → Recompile to render the updated Decision Pack.</div>`;
+    return;
+  }
+  const dp = state.dp;
+
+  const landscapeHtml = `<ul class="list">${dp.landscapeSnapshot.map(x => `<li><b>${escapeHtml(x.category)}</b>: ${escapeHtml(x.note)}</li>`).join("")}</ul>`;
+  const sauceHtml = `<ul class="list">${dp.secretSauceHypothesisMap.map(x => `<li><b>${escapeHtml(x.claim)}</b><br/><span class="muted">Proof needed:</span> ${escapeHtml(x.proofNeeded)}</li>`).join("")}</ul>`;
+  const riskHtml = `<ul class="list">${dp.riskRegister.map(r => `<li><b>${escapeHtml(r.id)}</b> ${escapeHtml(r.risk)}<br/><span class="muted">Mitigation:</span> ${escapeHtml(r.mitigation)} <span class="badge">${escapeHtml(r.status)}</span></li>`).join("")}</ul>`;
+
+  const qaHtml = dp.diligenceQA.length ? `
+    <ul class="list">
+      ${dp.diligenceQA.map(q => `
+        <li>
+          <b>${escapeHtml(q.topic)}</b> — ${escapeHtml(q.question)}
+          <span class="badge">${escapeHtml(q.status)}</span><br/>
+          <span class="muted">Evidence refs:</span> <span class="mono">${escapeHtml(q.evidenceRefs.join(", ") || "—")}</span>
+        </li>
+      `).join("")}
+    </ul>` : `<div class="muted">No diligence questions yet.</div>`;
+
+  const evHtml = dp.evidenceIndex.length ? `
+    <ul class="list">
+      ${dp.evidenceIndex.slice().reverse().map(e => `
+        <li>
+          <span class="mono">${escapeHtml(e.type)}</span> — ${escapeHtml(e.title)}<br/>
+          <span class="muted">Linked to:</span> ${escapeHtml((e.linkedTo||[]).join(", "))}${e.answersQ ? `<br/><span class="muted">Answers:</span> ${escapeHtml(e.answersQ)}` : ""}
+        </li>
+      `).join("")}
+    </ul>` : `<div class="muted">No evidence yet.</div>`;
+
+  const gapHtml = dp.gaps.length ? `<ul class="list">${dp.gaps.map(g => `<li>${escapeHtml(g.gap)} <span class="badge">${escapeHtml(g.severity)}</span></li>`).join("")}</ul>` : `<div class="muted">No gaps flagged.</div>`;
+
+  UI.dpView.innerHTML = `
+    <div class="section">
+      <h3><span>Meta</span><span class="pill mono">v${dp.meta.version}</span></h3>
+      <div class="kv"><div class="k">One-liner</div><div class="v">${escapeHtml(dp.meta.oneLiner)}</div></div>
+      <div class="kv"><div class="k">ICP</div><div class="v">${escapeHtml(dp.meta.icp)}</div></div>
+      <div class="kv"><div class="k">Compiled</div><div class="v mono">${escapeHtml(dp.meta.compiledAt)}</div></div>
+      <div class="kv"><div class="k">Stats</div><div class="v">${dp.stats.questionsAnswered}/${dp.stats.questionsTotal} Qs answered • ${dp.stats.evidenceItems} evidence • ${dp.stats.tasksDone}/${dp.stats.tasksTotal} tasks done</div></div>
+    </div>
+
+    <div class="section">
+      <h3><span>Landscape Snapshot</span><span class="pill">baseline</span></h3>
+      ${landscapeHtml}
+    </div>
+
+    <div class="section">
+      <h3><span>Secret Sauce Hypotheses</span><span class="pill">${dp.secretSauceHypothesisMap.length} items</span></h3>
+      ${sauceHtml}
+    </div>
+
+    <div class="section">
+      <h3><span>Diligence Q&amp;A</span><span class="pill">${dp.stats.questionsTotal} questions</span></h3>
+      ${qaHtml}
+    </div>
+
+    <div class="section">
+      <h3><span>Risk Register</span><span class="pill">${dp.riskRegister.length} risks</span></h3>
+      ${riskHtml}
+    </div>
+
+    <div class="section">
+      <h3><span>Evidence Index</span><span class="pill">${dp.evidenceIndex.length} items</span></h3>
+      ${evHtml}
+    </div>
+
+    <div class="section">
+      <h3><span>Gaps (what blocks forwardability)</span><span class="pill">${dp.gaps.length} flagged</span></h3>
+      ${gapHtml}
+    </div>
+  `;
+}
+
+function renderRubric(){
+  if(!state.rubric){
+    UI.rubricView.innerHTML = `<div class="muted">Run rubrics after compiling.</div>`;
+    return;
+  }
+  const r = state.rubric;
+  UI.rubricView.innerHTML = `
+    <div class="section">
+      <h3><span>Summary</span><span class="pill ${r.gate==="PASS"?"good":"bad"}">${r.gate}</span></h3>
+      <div class="kv"><div class="k">Total score</div><div class="v"><b>${r.totalScore}</b> / 100</div></div>
+      <div class="kv"><div class="k">Blockers</div><div class="v"><b>${r.blockers}</b></div></div>
+      <div class="kv"><div class="k">Scored at</div><div class="v mono">${escapeHtml(r.scoredAt)}</div></div>
+      <div class="hr"></div>
+      <div class="tiny">Checks</div>
+      <ul class="list">
+        ${r.checks.map(c => `<li><b>${escapeHtml(c.key)}</b>: ${c.score}/${c.max} — <span class="muted">${escapeHtml(c.note)}</span></li>`).join("")}
+      </ul>
+    </div>
+  `;
+}
+
+function renderHistory(){
+  UI.histCount.textContent = String(state.history.length);
+  if(state.history.length === 0){
+    UI.histView.innerHTML = `<div class="muted">No versions yet.</div>`;
+    return;
+  }
+  UI.histView.innerHTML = `
+    <ul class="list">
+      ${state.history.slice().reverse().map(h => `
+        <li>
+          <b class="mono">v${h.version}</b> — <span class="muted mono">${escapeHtml(h.ts)}</span><br/>
+          <span class="muted">${escapeHtml(h.summary)}</span>
+        </li>
+      `).join("")}
+    </ul>
+  `;
+}
+
+function renderTopPills(){
+  setPill(UI.versionPill, `<b class="mono">v${state.version}</b> • ${state.compiled ? "compiled" : "not compiled"}`, state.compiled ? "" : "");
+  if(state.forwardable === true) setPill(UI.forwardablePill, `Forwardable: <b>yes</b>`, "good");
+  else if(state.forwardable === false) setPill(UI.forwardablePill, `Forwardable: <b>not yet</b>`, "warn");
+  else setPill(UI.forwardablePill, `Forwardable: <b>unknown</b>`);
+
+  if(state.score != null) setPill(UI.scorePill, `Score: <b>${state.score}</b>`, state.score >= 80 ? "good" : "warn");
+  else setPill(UI.scorePill, `Score: <b>—</b>`);
+
+  if(state.rubric?.gate) setPill(UI.gatePill, `Gate: <b>${state.rubric.gate}</b>`, state.rubric.gate === "PASS" ? "good" : "bad");
+  else setPill(UI.gatePill, `Gate: <b>—</b>`);
+
+  const dpStatus = state.dp ? "compiled" : "draft";
+  setPill(UI.dpStatusPill, `Status: <b>${dpStatus}</b>`, state.dp ? "" : "");
+}
+
+function renderPlanPill(){
+  const done = state.tasks.length > 0;
+  setPill(UI.planPill, `Plan: <b>${done ? "generated" : "not generated"}</b>`, done ? "good" : "");
+}
+
+function renderAll(){
+  renderTopPills();
+  renderPlanPill();
+  renderQuestions();
+  renderTasks();
+  renderEvidence();
+  renderDecisionPack();
+  renderRubric();
+  renderHistory();
+}
+
+function shortId(id){ return (id || "").split("_")[0] + "_" + (id || "").split("_")[1]?.slice(0,4); }
+
+// ---------- Actions ----------
+function addQuestion(text, topic=null){
+  const q = {
+    id: uid("Q"),
+    text: String(text || "").trim(),
+    topic: topic || classifyTopic(text),
+    addedAt: nowIso(),
+    status: "new",
+    answerEvidenceIds: []
+  };
+  if(!q.text) return;
+  state.questions.push(q);
+  log.info("Added question", q);
+  renderAll();
+}
+
+function removeQuestion(qid){
+  state.questions = state.questions.filter(q => q.id !== qid);
+  // also remove tasks derived from it
+  state.tasks = state.tasks.filter(t => t.fromQId !== qid);
+  log.warn("Removed question and derived tasks", qid);
+  renderAll();
+}
+
+function seedExampleQs(){
+  addQuestion(TEMPLATES[0].text, TEMPLATES[0].topic);
+  addQuestion(TEMPLATES[1].text, TEMPLATES[1].topic);
+  addQuestion(TEMPLATES[4].text, TEMPLATES[4].topic);
+  addQuestion(TEMPLATES[3].text, TEMPLATES[3].topic);
+}
+
+function generatePlan(){
+  log.group("=== Generate Evidence Plan ===");
+  const newTasks = generatePlanFromQuestions(state.questions);
+  // merge without duplicates by title+fromQId
+  const key = (t) => `${t.fromQId}::${t.title}`;
+  const existing = new Set(state.tasks.map(key));
+  for(const t of newTasks){
+    if(!existing.has(key(t))) state.tasks.push(t);
+  }
+  log.info("Plan generated", { tasks: state.tasks.length, questions: state.questions.length });
+  log.groupEnd();
+  renderAll();
+}
+
+function recompile(){
+  // version increments AFTER first compile
+  if(state.compiled) state.version += 1;
+  state.compiled = true;
+
+  state.dp = recompileDecisionPack();
+
+  // reset rubric on recompile until rerun
+  state.rubric = null;
+  state.score = null;
+  state.forwardable = "unknown";
+
+  const unanswered = state.questions.filter(q => q.status !== "answered").length;
+  const summary = `Qs:${state.questions.length} (unanswered:${unanswered}) • tasks:${state.tasks.filter(t=>t.done).length}/${state.tasks.length} • evidence:${state.evidence.length}`;
+  state.history.push({ version: state.version, ts: nowIso(), summary });
+
+  log.info("Recompiled DP", { version: state.version, summary });
+  renderAll();
+}
+
+function runRubricsBtn(){
+  if(!state.dp){
+    log.warn("No Decision Pack yet. Recompile first.");
+    return;
+  }
+  state.rubric = runRubrics(state.dp);
+  state.score = state.rubric.totalScore;
+  state.forwardable = state.rubric.gate === "PASS";
+  log.info("Rubrics complete", { score: state.score, gate: state.rubric.gate });
+  renderAll();
+}
+
+function reset(){
+  log.info("Reset demo");
+  state.version = 0;
+  state.compiled = false;
+  state.dp = null;
+  state.rubric = null;
+  state.score = null;
+  state.forwardable = "unknown";
+  state.questions = [];
+  state.tasks = [];
+  state.evidence = [];
+  state.history = [];
+  UI.inpNewQ.value = "";
+  renderAll();
+}
+
+// ---------- Wire UI ----------
+initTemplateSelect();
+
+UI.btnAddTemplate.addEventListener("click", () => {
+  const id = UI.selTemplate.value;
+  const t = TEMPLATES.find(x => x.id === id);
+  if(t) addQuestion(t.text, t.topic);
+});
+
+UI.btnAddCustom.addEventListener("click", () => {
+  addQuestion(UI.inpNewQ.value, null);
+  UI.inpNewQ.value = "";
+});
+
+UI.btnSeedQs.addEventListener("click", seedExampleQs);
+UI.btnGeneratePlan.addEventListener("click", generatePlan);
+UI.btnCompile.addEventListener("click", recompile);
+UI.btnRunRubrics.addEventListener("click", runRubricsBtn);
+UI.btnReset.addEventListener("click", reset);
+
+// expose functions for inline onclick
+window.markTaskDone = markTaskDone;
+window.removeQuestion = removeQuestion;
+
+// boot
+reset();
+</script>
+</body>
+</html>

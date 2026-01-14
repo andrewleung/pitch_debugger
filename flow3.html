@@ -1,0 +1,934 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Flow 3 Demo — Patent Intelligence Enriches the Decision Pack (IP Layer Update)</title>
+  <style>
+    :root{
+      --bg:#0b1020; --panel:#0f1733; --panel2:#0c1430; --border:#243058;
+      --text:#e8ecff; --muted:#a9b4e6; --good:#38d39f; --warn:#ffd166; --bad:#ff6b6b; --accent:#7aa2ff;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:var(--sans); color:var(--text);
+      background:linear-gradient(180deg,#070b17 0%, #0b1020 45%, #060916 100%);
+    }
+    header{
+      padding:16px 20px; border-bottom:1px solid var(--border);
+      background:rgba(15,23,51,0.65); backdrop-filter: blur(8px);
+      position:sticky; top:0; z-index:5;
+      display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+    }
+    header h1{ margin:0; font-size:16px; letter-spacing:0.2px;}
+    header .sub{ color:var(--muted); font-size:12px; max-width:980px;}
+    .wrap{ padding:16px 20px 24px; max-width:1420px; margin:0 auto;}
+    .grid{ display:grid; grid-template-columns: 1.05fr 0.95fr; gap:14px; }
+    @media (max-width: 980px){ .grid{ grid-template-columns: 1fr; } }
+    .card{
+      border:1px solid var(--border); border-radius:14px; background:rgba(15,23,51,0.55);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.25); overflow:hidden;
+    }
+    .card .hd{
+      padding:12px 14px; border-bottom:1px solid var(--border);
+      display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+      background:linear-gradient(180deg, rgba(122,162,255,0.08), rgba(15,23,51,0.0));
+    }
+    .card .hd .title{ font-weight:800; font-size:13px; }
+    .card .hd .hint{ color:var(--muted); font-size:12px; }
+    .card .bd{ padding:12px 14px; }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    button{
+      border:1px solid var(--border); background:#101a3a; color:var(--text);
+      padding:9px 10px; border-radius:10px; cursor:pointer; font-weight:700; font-size:12px;
+    }
+    button:hover{ border-color:#32407a; background:#0f1a3f; }
+    button.primary{ border-color: rgba(122,162,255,0.7); box-shadow:0 0 0 2px rgba(122,162,255,0.12) inset; }
+    button.danger{ border-color: rgba(255,107,107,0.75); }
+    button:disabled{ opacity:0.55; cursor:not-allowed; }
+    textarea, input, select{
+      width:100%; border-radius:12px; border:1px solid var(--border);
+      background:rgba(12,20,48,0.75); color:var(--text);
+      padding:10px 10px; font-size:12px; outline:none;
+    }
+    textarea{ min-height:92px; resize:vertical; font-family:var(--mono); line-height:1.35; }
+    .pill{
+      display:inline-flex; align-items:center; gap:6px;
+      padding:4px 8px; border-radius:999px;
+      border:1px solid var(--border); background:rgba(12,20,48,0.8);
+      font-size:11px; color:var(--muted);
+    }
+    .pill b{ color:var(--text); font-weight:900; }
+    .pill.good{ border-color: rgba(56,211,159,0.5); }
+    .pill.warn{ border-color: rgba(255,209,102,0.6); }
+    .pill.bad{ border-color: rgba(255,107,107,0.55); }
+    .mono{ font-family:var(--mono); }
+    .muted{ color:var(--muted); }
+    .tiny{ font-size:11px; color:var(--muted); }
+    .section{
+      border:1px solid rgba(36,48,88,0.75); background:rgba(12,20,48,0.45);
+      border-radius:12px; padding:10px; margin:10px 0;
+    }
+    .section h3{ margin:0 0 6px; font-size:12px; display:flex; align-items:center; justify-content:space-between; gap:10px;}
+    .list{ margin:6px 0 0; padding-left:16px; }
+    .list li{ margin:4px 0; font-size:12px; }
+    .kv{ display:grid; grid-template-columns: 170px 1fr; gap:8px; margin:4px 0; }
+    .kv .k{ color:var(--muted); font-size:11px; }
+    .kv .v{ font-size:12px; }
+    .hr{ height:1px; background:var(--border); margin:12px 0; opacity:0.85; }
+    .rightcol{ display:grid; grid-template-rows:auto auto 1fr; gap:14px;}
+    .chip{
+      padding:6px 8px; border-radius:10px; background:rgba(12,20,48,0.7); border:1px solid var(--border);
+      font-family:var(--mono); font-size:11px; color:var(--text); display:inline-flex; align-items:center; gap:8px;
+    }
+    .delta{
+      border:1px solid var(--border); background:rgba(12,20,48,0.55);
+      border-radius:12px; padding:10px; margin:8px 0;
+    }
+    .delta.good{ border-color: rgba(56,211,159,0.45); }
+    .delta.warn{ border-color: rgba(255,209,102,0.55); }
+    .delta.bad{ border-color: rgba(255,107,107,0.55); }
+    .badge{
+      display:inline-block; font-size:10px; padding:2px 6px; border-radius:8px; margin-left:8px;
+      border:1px dashed rgba(255,209,102,0.7); color:var(--warn);
+      vertical-align:middle;
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Flow 3 Demo: Patent Intelligence Enriches the Decision Pack (IP Layer Update)</h1>
+    <div class="sub">
+      This demo simulates: Decision Pack secret sauce → <b>Patent Intelligence</b> runs a mock landscape/prior-art scan →
+      produces an <b>IP Delta Packet</b> (novelty deltas, claim hooks, design-around risk, file/publish/hold) →
+      <b>Workflow OS</b> turns it into tasks/risks → <b>Pitch Debugger</b> recompiles the pack with an IP section.
+      Open DevTools → Console for trace logs.
+    </div>
+  </div>
+  <div class="row">
+    <span class="pill mono" id="versionPill"><b>v0</b> • not compiled</span>
+    <span class="pill" id="ipPill">IP Delta: <b>none</b></span>
+    <span class="pill mono" id="scorePill">Score: <b>—</b></span>
+    <button class="primary" id="btnCompile">Compile / Recompile</button>
+    <button id="btnRunPatentIntel">Run Patent Intelligence</button>
+    <button id="btnApplyDelta">Apply IP Delta → Tasks</button>
+    <button id="btnRunRubrics">Run Rubrics</button>
+    <button class="danger" id="btnReset">Reset</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="grid">
+    <!-- LEFT: INPUTS + PATENT INTEL + TASKS -->
+    <div class="card">
+      <div class="hd">
+        <div>
+          <div class="title">Inputs → Patent Intelligence → IP Delta Packet</div>
+          <div class="hint">Edit the secret sauce map, run Patent Intelligence, then apply delta to generate IP tasks.</div>
+        </div>
+        <div class="row">
+          <span class="pill" id="evPill">Evidence: <b id="evCount">0</b></span>
+          <span class="pill" id="taskPill">IP Tasks: <b id="taskCount">0</b></span>
+        </div>
+      </div>
+      <div class="bd">
+        <div class="section">
+          <h3>
+            <span>Decision Pack — Secret Sauce Hypotheses (editable)</span>
+            <span class="chip">feeds Patent Intelligence</span>
+          </h3>
+          <div class="tiny">Format: one hypothesis per line (claim hook candidate)</div>
+          <textarea id="txtSauce"></textarea>
+          <div class="row" style="margin-top:10px;">
+            <div style="flex:1; min-width:240px;">
+              <div class="tiny">Domain preset (mock prior art pool)</div>
+              <select id="selDomain"></select>
+            </div>
+            <div style="flex:1; min-width:240px;">
+              <div class="tiny">Strategy bias</div>
+              <select id="selBias">
+                <option value="balanced">Balanced</option>
+                <option value="defensive_publication">Bias: Defensive publication</option>
+                <option value="file_now">Bias: File now (provisional)</option>
+                <option value="trade_secret">Bias: Trade secret (hold)</option>
+              </select>
+            </div>
+          </div>
+          <div class="row" style="margin-top:10px;">
+            <button class="primary" id="btnSeedSauce">Seed example secret sauce</button>
+            <button id="btnClearSauce">Clear</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>
+            <span>Patent Intelligence — IP Delta Packet</span>
+            <span class="pill" id="deltaStatusPill">Delta: <b>not run</b></span>
+          </h3>
+          <div id="deltaView" class="muted">Run Patent Intelligence to generate the IP delta packet.</div>
+        </div>
+
+        <div class="section">
+          <h3>
+            <span>Workflow OS — IP Tasks (from delta)</span>
+            <span class="pill" id="tasksStatusPill">Tasks: <b>not generated</b></span>
+          </h3>
+          <div id="tasksView" class="muted">Apply IP delta to generate tasks (e.g., file/publish/hold actions).</div>
+        </div>
+
+        <div class="section">
+          <h3><span>Evidence Vault (receipts)</span><span class="pill mono"><b>JSON</b></span></h3>
+          <textarea id="txtEvidence" readonly></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: DECISION PACK + IP SECTION + HISTORY -->
+    <div class="rightcol">
+      <div class="card">
+        <div class="hd">
+          <div>
+            <div class="title">Decision Pack (canonical) — with IP Layer</div>
+            <div class="hint">Compile first, then run Patent Intelligence to enrich the IP section.</div>
+          </div>
+          <div class="row">
+            <span class="pill" id="forwardPill">Forwardable: <b>unknown</b></span>
+            <span class="pill" id="gatePill">Gate: <b>—</b></span>
+          </div>
+        </div>
+        <div class="bd" id="dpView">
+          <div class="muted">Compile to generate Decision Pack v0.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd">
+          <div>
+            <div class="title">Rubrics (IP-aware underwriting gate)</div>
+            <div class="hint">Scores: claim hooks clarity, novelty delta, design-around risk bounded, action plan.</div>
+          </div>
+        </div>
+        <div class="bd" id="rubricView">
+          <div class="muted">Run rubrics after IP delta is applied.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd">
+          <div>
+            <div class="title">Version History</div>
+            <div class="hint">Each compile adds an entry. (Material Change Publisher not shown here.)</div>
+          </div>
+          <div class="row">
+            <span class="pill" id="histPill">Entries: <b id="histCount">0</b></span>
+          </div>
+        </div>
+        <div class="bd" id="histView">
+          <div class="muted">No versions yet.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/**
+ * Flow 3 Demo:
+ * Secret sauce hypotheses -> Patent Intelligence -> IP Delta Packet -> Workflow OS tasks -> Pitch Debugger recompile with IP section
+ * Debug: open DevTools console.
+ */
+
+const log = {
+  info: (...a) => console.info("[flow3]", ...a),
+  debug: (...a) => console.debug("[flow3]", ...a),
+  warn: (...a) => console.warn("[flow3]", ...a),
+  group: (label) => console.group(label),
+  groupEnd: () => console.groupEnd(),
+};
+
+const uid = (p) => `${p}_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`;
+const nowIso = () => new Date().toISOString();
+const escapeHtml = (str) => String(str ?? "")
+  .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+  .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+
+const DOMAINS = [
+  { id:"pitch_underwriting", label:"Pitch Underwriting Packs (Decision Pack / evidence / rubrics)" },
+  { id:"agentic_security", label:"Agentic Security / LocalLock (encrypted workflows, policy, attachments)" },
+  { id:"tourism_loyalty", label:"Tourism / Loyalty rails (policy-gated, vouchers, stablecoin settlement)" },
+];
+
+const MOCK_PRIOR_ART_POOLS = {
+  pitch_underwriting: [
+    { ref:"PA-101", title:"Standard pitch deck templates + investor memo formats", proximity:0.45, note:"Common structures; weak novelty alone" },
+    { ref:"PA-102", title:"Due diligence checklists and data rooms", proximity:0.60, note:"Evidence collection + organization exists" },
+    { ref:"PA-103", title:"AI-assisted pitch writing / deck builders", proximity:0.55, note:"Focus on persuasion and polish" },
+    { ref:"PA-104", title:"Risk registers used in project management", proximity:0.35, note:"Generic risk patterns; not underwriting-centric" }
+  ],
+  agentic_security: [
+    { ref:"PA-201", title:"Encrypted email + attachments + key management systems", proximity:0.62, note:"Strong adjacency; need differentiator" },
+    { ref:"PA-202", title:"Secure portals / virtual data rooms with access controls", proximity:0.55, note:"Distribution + permissions patterns exist" },
+    { ref:"PA-203", title:"Agent-based workflow automation", proximity:0.42, note:"Automation exists; policies may be novel angle" },
+    { ref:"PA-204", title:"Audit logging and tamper-evident logs", proximity:0.50, note:"Logging common; need unique change semantics" }
+  ],
+  tourism_loyalty: [
+    { ref:"PA-301", title:"Loyalty points and coupon/voucher systems", proximity:0.60, note:"Core patterns exist; look for policy gating" },
+    { ref:"PA-302", title:"Stablecoin settlement rails & merchant POS integrations", proximity:0.58, note:"Adjacent; need specific orchestration novelty" },
+    { ref:"PA-303", title:"Tourism apps with local merchant discovery", proximity:0.45, note:"UI layer common" },
+    { ref:"PA-304", title:"Digital identity / eligibility checks for subsidies", proximity:0.52, note:"Eligibility policy components exist" }
+  ]
+};
+
+// “Patent Intelligence” heuristics (mock)
+function tokenize(s){ return String(s||"").toLowerCase().split(/[^a-z0-9]+/g).filter(Boolean); }
+
+function computeSimilarity(hypothesis, priorArtTitle){
+  const a = new Set(tokenize(hypothesis));
+  const b = new Set(tokenize(priorArtTitle));
+  if(a.size === 0 || b.size === 0) return 0;
+  let inter = 0;
+  for(const x of a) if(b.has(x)) inter++;
+  const union = a.size + b.size - inter;
+  return inter / union; // Jaccard
+}
+
+function chooseAction(bias, risk){
+  // bias: defensive_publication | file_now | trade_secret | balanced
+  if(bias === "defensive_publication") return risk >= 0.55 ? "publish_defensive" : "hold";
+  if(bias === "file_now") return risk >= 0.40 ? "file_provisional" : "hold";
+  if(bias === "trade_secret") return risk >= 0.65 ? "file_provisional" : "hold_trade_secret";
+  // balanced
+  if(risk >= 0.65) return "file_provisional";
+  if(risk >= 0.50) return "publish_defensive";
+  return "hold";
+}
+
+function actionLabel(action){
+  if(action === "file_provisional") return "File provisional";
+  if(action === "publish_defensive") return "Defensive publication";
+  if(action === "hold_trade_secret") return "Hold as trade secret";
+  return "Hold / monitor";
+}
+
+// ---------- App state ----------
+const state = {
+  version: 0,
+  compiled: false,
+  dp: null,
+  ipDelta: null,
+  ipTasks: [],
+  evidence: [],
+  rubric: null,
+  score: null,
+  forwardable: "unknown",
+  history: []
+};
+
+const el = (id) => document.getElementById(id);
+const UI = {
+  versionPill: el("versionPill"),
+  ipPill: el("ipPill"),
+  scorePill: el("scorePill"),
+  forwardPill: el("forwardPill"),
+  gatePill: el("gatePill"),
+  evCount: el("evCount"),
+  taskCount: el("taskCount"),
+  histCount: el("histCount"),
+
+  txtSauce: el("txtSauce"),
+  selDomain: el("selDomain"),
+  selBias: el("selBias"),
+
+  btnCompile: el("btnCompile"),
+  btnRunPatentIntel: el("btnRunPatentIntel"),
+  btnApplyDelta: el("btnApplyDelta"),
+  btnRunRubrics: el("btnRunRubrics"),
+  btnReset: el("btnReset"),
+
+  btnSeedSauce: el("btnSeedSauce"),
+  btnClearSauce: el("btnClearSauce"),
+
+  deltaStatusPill: el("deltaStatusPill"),
+  deltaView: el("deltaView"),
+  tasksStatusPill: el("tasksStatusPill"),
+  tasksView: el("tasksView"),
+  txtEvidence: el("txtEvidence"),
+
+  dpView: el("dpView"),
+  rubricView: el("rubricView"),
+  histView: el("histView"),
+
+  deltaStatusPill2: el("deltaStatusPill"),
+  tasksStatusPill2: el("tasksStatusPill"),
+};
+
+function setPill(pillEl, html, tone){
+  pillEl.classList.remove("good","warn","bad");
+  if(tone) pillEl.classList.add(tone);
+  pillEl.innerHTML = html;
+}
+
+function initDomainSelect(){
+  UI.selDomain.innerHTML = DOMAINS.map(d => `<option value="${d.id}">${escapeHtml(d.label)}</option>`).join("");
+}
+
+function parseSauceLines(){
+  return UI.txtSauce.value.split("\n").map(s => s.trim()).filter(Boolean);
+}
+
+// ---------- Decision Pack compile (minimal) ----------
+function compileDecisionPack(){
+  log.group(`PitchDebugger.compileDecisionPack() v${state.version}`);
+  const sauceLines = parseSauceLines();
+
+  const dp = {
+    meta: {
+      id: uid("DP"),
+      version: state.version,
+      compiledAt: nowIso(),
+      title: "Decision Pack — IP Enrichment (Demo)",
+      oneLiner: "Decision Pack stays underwritable by enriching the IP layer (claim hooks + novelty deltas + design-around risk).",
+      icp: "Founders + investors + IP counsel (triangulated diligence)."
+    },
+    secretSauceHypothesisMap: sauceLines.map((c, i) => ({ id:`H${i+1}`, claim:c })),
+    ip: {
+      deltaApplied: !!state.ipDelta,
+      ipDeltaPacket: state.ipDelta,
+      tasks: state.ipTasks,
+      evidenceIndex: state.evidence.map(e => ({ id:e.id, type:e.type, title:e.title, ts:e.ts }))
+    },
+    riskRegister: [
+      { id:"R-IP1", risk:"Claim hooks overlap prior art; novelty delta unclear", mitigation:"Run PI scan; draft novelty delta; narrow hooks", status: state.ipDelta ? "mitigating" : "open" },
+      { id:"R-IP2", risk:"Fast follower design-around likely", mitigation:"Map variants; picket-fence plan; defensive publication", status: state.ipDelta ? "mitigating" : "open" }
+    ],
+    gaps: []
+  };
+
+  if(sauceLines.length < 2) dp.gaps.push({ id:"G1", gap:"Secret sauce hypotheses are too thin (need 2–4 claim hook candidates)", severity:"blocker" });
+  if(!state.ipDelta) dp.gaps.push({ id:"G2", gap:"IP layer not enriched yet (run Patent Intelligence)", severity:"blocker" });
+  if(state.evidence.length < 1) dp.gaps.push({ id:"G3", gap:"No IP receipts (e.g., novelty delta memo / adjacency table)", severity:"warn" });
+
+  log.debug("Decision Pack", dp);
+  log.groupEnd();
+  return dp;
+}
+
+// ---------- Patent Intelligence (mock scan) ----------
+function runPatentIntelligence(){
+  log.group("PatentIntelligence.run()");
+  const domain = UI.selDomain.value;
+  const bias = UI.selBias.value;
+  const pool = MOCK_PRIOR_ART_POOLS[domain] || [];
+
+  const sauce = parseSauceLines();
+  log.debug("domain", domain, "bias", bias);
+  log.debug("hypotheses", sauce);
+
+  if(sauce.length === 0){
+    log.warn("No hypotheses provided; cannot run PI.");
+    return null;
+  }
+
+  // For each hypothesis: find closest prior art + compute risk score
+  const hooks = sauce.map((h, idx) => {
+    let best = null;
+    let bestSim = 0;
+    for(const p of pool){
+      const sim = computeSimilarity(h, p.title);
+      // combine with pool's proximity to simulate "semantic adjacency"
+      const combined = 0.55 * sim + 0.45 * p.proximity;
+      if(combined > bestSim){
+        bestSim = combined;
+        best = p;
+      }
+    }
+    const adjacencyRisk = Math.min(0.95, Math.max(0.05, bestSim));
+    const action = chooseAction(bias, adjacencyRisk);
+
+    // create a "novelty delta" stub
+    const noveltyDelta = adjacencyRisk >= 0.55
+      ? "Narrow the hook: specify the rubric gates + evidence-index linkage + change-triggered recompile semantics."
+      : "Emphasize end-to-end compiler→rubric→task→evidence closure and versioned underwriting readiness signals.";
+
+    // create design-around notes
+    const designAround = adjacencyRisk >= 0.55
+      ? ["Competitor adds ‘checklist’ UI without gating", "Consultant offers bespoke memo without standardized evidence index", "Deck builder adds ‘risk section’ without receipts linkage"]
+      : ["Incremental tools unlikely to replicate gating + evidence linkage quickly", "Main risk: copy narrative framing without the OS loop"];
+
+    return {
+      id: `CH${idx+1}`,
+      claimHook: h,
+      closestPriorArt: best ? { ref: best.ref, title: best.title, note: best.note } : null,
+      adjacencyRisk: Number(adjacencyRisk.toFixed(2)),
+      recommendedAction: action,
+      noveltyDelta,
+      designAroundRisks: designAround
+    };
+  });
+
+  // Aggregate delta packet
+  const overallRisk = hooks.reduce((a, x) => a + x.adjacencyRisk, 0) / hooks.length;
+  const summary = overallRisk >= 0.65 ? "High adjacency: tighten claim hooks and file/publish selectively."
+                : overallRisk >= 0.50 ? "Medium adjacency: clarify novelty deltas; consider defensive publication."
+                : "Lower adjacency: keep monitoring; build picket-fence variants.";
+
+  const delta = {
+    id: uid("IPDELTA"),
+    generatedAt: nowIso(),
+    domain,
+    bias,
+    priorArtPool: pool.map(p => ({ ref:p.ref, title:p.title, proximity:p.proximity })),
+    claimHooks: hooks,
+    overallAdjacencyRisk: Number(overallRisk.toFixed(2)),
+    summary
+  };
+
+  log.debug("IP Delta Packet", delta);
+  log.groupEnd();
+  return delta;
+}
+
+// ---------- Workflow OS: turn delta into tasks + produce evidence ----------
+function applyIpDeltaToTasks(delta){
+  log.group("WorkflowOS.applyIpDeltaToTasks()");
+  if(!delta){
+    log.warn("No delta to apply.");
+    log.groupEnd();
+    return [];
+  }
+
+  const tasks = [];
+  // global tasks
+  tasks.push({
+    id: uid("T"),
+    title: "Draft 1-page novelty delta memo (attach to pack)",
+    severity: "blocker",
+    done: false,
+    producesEvidence: { type:"memo", title:"Novelty delta memo (mock)", payload:{ linkedTo:["IP.novelty_delta"], deltaId: delta.id } }
+  });
+
+  tasks.push({
+    id: uid("T"),
+    title: "Create claim-hook variants (picket-fence) for top 2 hooks",
+    severity: "normal",
+    done: false,
+    producesEvidence: { type:"spec", title:"Claim hook variants (mock)", payload:{ linkedTo:["IP.claim_hooks"], deltaId: delta.id } }
+  });
+
+  // per-hook tasks (file/publish/hold)
+  for(const h of delta.claimHooks){
+    const act = h.recommendedAction;
+    const label = actionLabel(act);
+    const sev = h.adjacencyRisk >= 0.65 ? "blocker" : "normal";
+    tasks.push({
+      id: uid("T"),
+      title: `${label} for hook ${h.id} (risk ${h.adjacencyRisk})`,
+      severity: sev,
+      done:false,
+      producesEvidence: {
+        type: act === "file_provisional" ? "filing_stub" : (act === "publish_defensive" ? "pub_stub" : "hold_note"),
+        title: `${label} decision record (mock) — ${h.id}`,
+        payload: { linkedTo:["IP.action_plan"], hookId: h.id, action: act, deltaId: delta.id }
+      }
+    });
+
+    // design-around mapping task if risk medium/high
+    if(h.adjacencyRisk >= 0.50){
+      tasks.push({
+        id: uid("T"),
+        title: `Map design-around risks for ${h.id} + counter-claims`,
+        severity: "normal",
+        done:false,
+        producesEvidence: { type:"table", title:`Design-around map (mock) — ${h.id}`, payload:{ linkedTo:["IP.design_around"], hookId:h.id, deltaId:delta.id } }
+      });
+    }
+  }
+
+  // dedupe by title
+  const seen = new Set();
+  const deduped = tasks.filter(t => (seen.has(t.title) ? false : (seen.add(t.title), true)));
+
+  log.debug("generated tasks", deduped);
+  log.groupEnd();
+  return deduped;
+}
+
+function markTaskDone(taskId){
+  const t = state.ipTasks.find(x => x.id === taskId);
+  if(!t || t.done) return;
+
+  log.group("WorkflowOS.markTaskDone()");
+  log.debug("task", t);
+  t.done = true;
+
+  const ev = {
+    id: uid("EV"),
+    type: t.producesEvidence?.type || "trace",
+    title: t.producesEvidence?.title || `Task completed: ${t.title}`,
+    payload: t.producesEvidence?.payload || {},
+    ts: nowIso()
+  };
+  state.evidence.push(ev);
+
+  log.info("Produced evidence", ev);
+  log.groupEnd();
+  renderAll();
+}
+
+// ---------- Rubrics (IP-aware) ----------
+function runIpRubrics(dp){
+  log.group("WorkflowOS.runIpRubrics()");
+  const checks = [];
+  let score = 0;
+
+  const hooksCount = dp.secretSauceHypothesisMap.length;
+  const hookScore = hooksCount >= 3 ? 25 : Math.min(25, hooksCount * 8);
+  score += hookScore;
+  checks.push({ key:"Claim hooks present", score:hookScore, max:25, note:`hooks: ${hooksCount}` });
+
+  const hasDelta = !!dp.ip.ipDeltaPacket;
+  const deltaScore = hasDelta ? 30 : 0;
+  score += deltaScore;
+  checks.push({ key:"Novelty delta computed (PI run)", score:deltaScore, max:30, note: hasDelta ? "delta packet attached" : "missing" });
+
+  const hasDesignAround = state.evidence.some(e => e.type === "table" && (e.payload?.linkedTo||[]).includes("IP.design_around"));
+  const daScore = hasDesignAround ? 20 : (hasDelta ? 10 : 0);
+  score += daScore;
+  checks.push({ key:"Design-around risk bounded", score:daScore, max:20, note: hasDesignAround ? "design-around map attached" : "not yet" });
+
+  const actionEvidence = state.evidence.some(e => ["filing_stub","pub_stub","hold_note"].includes(e.type));
+  const actionScore = actionEvidence ? 25 : (hasDelta ? 12 : 0);
+  score += actionScore;
+  checks.push({ key:"Action plan (file/publish/hold) recorded", score:actionScore, max:25, note: actionEvidence ? "decision records present" : "missing decision records" });
+
+  const blockers = dp.gaps.filter(g => g.severity === "blocker").length;
+  const gate = (score >= 80) && (blockers === 0) ? "PASS" : "FAIL";
+
+  const rubric = { scoredAt: nowIso(), totalScore: score, gate, blockers, checks };
+  log.debug("rubric", rubric);
+  log.groupEnd();
+  return rubric;
+}
+
+// ---------- Render ----------
+function renderTopPills(){
+  setPill(UI.versionPill, `<b class="mono">v${state.version}</b> • ${state.compiled ? "compiled" : "not compiled"}`, state.compiled ? "" : "");
+  setPill(UI.ipPill, `IP Delta: <b>${state.ipDelta ? "ready" : "none"}</b>`, state.ipDelta ? "good" : "");
+
+  UI.evCount.textContent = String(state.evidence.length);
+  UI.taskCount.textContent = String(state.ipTasks.length);
+
+  if(state.score != null) setPill(UI.scorePill, `Score: <b>${state.score}</b>`, state.score >= 80 ? "good" : "warn");
+  else setPill(UI.scorePill, `Score: <b>—</b>`);
+
+  if(state.forwardable === true) setPill(UI.forwardPill, `Forwardable: <b>yes</b>`, "good");
+  else if(state.forwardable === false) setPill(UI.forwardPill, `Forwardable: <b>not yet</b>`, "warn");
+  else setPill(UI.forwardPill, `Forwardable: <b>unknown</b>`);
+
+  if(state.rubric?.gate) setPill(UI.gatePill, `Gate: <b>${state.rubric.gate}</b>`, state.rubric.gate === "PASS" ? "good" : "bad");
+  else setPill(UI.gatePill, `Gate: <b>—</b>`);
+}
+
+function renderDelta(delta){
+  if(!delta){
+    setPill(UI.deltaStatusPill, `Delta: <b>not run</b>`);
+    UI.deltaView.innerHTML = `<div class="muted">Run Patent Intelligence to generate the IP delta packet.</div>`;
+    return;
+  }
+  setPill(UI.deltaStatusPill, `Delta: <b>generated</b>`, "good");
+
+  const poolHtml = `<ul class="list">${delta.priorArtPool.map(p => `<li><b class="mono">${escapeHtml(p.ref)}</b> — ${escapeHtml(p.title)} <span class="badge">prox ${p.proximity}</span></li>`).join("")}</ul>`;
+
+  const hooksHtml = `<ul class="list">
+    ${delta.claimHooks.map(h => {
+      const tone = h.adjacencyRisk >= 0.65 ? "bad" : (h.adjacencyRisk >= 0.50 ? "warn" : "good");
+      return `
+      <li>
+        <b class="mono">${escapeHtml(h.id)}</b> — ${escapeHtml(h.claimHook)} 
+        <span class="pill ${tone}">risk <b>${h.adjacencyRisk}</b></span>
+        <span class="badge">${escapeHtml(actionLabel(h.recommendedAction))}</span><br/>
+        <span class="muted">Closest prior art:</span> <span class="mono">${escapeHtml(h.closestPriorArt?.ref || "—")}</span> — ${escapeHtml(h.closestPriorArt?.title || "—")}<br/>
+        <span class="muted">Novelty delta:</span> ${escapeHtml(h.noveltyDelta)}<br/>
+        <span class="muted">Design-around risks:</span> ${escapeHtml(h.designAroundRisks.join(" • "))}
+      </li>`;
+    }).join("")}
+  </ul>`;
+
+  UI.deltaView.innerHTML = `
+    <div class="delta ${delta.overallAdjacencyRisk>=0.65?"bad":(delta.overallAdjacencyRisk>=0.50?"warn":"good")}">
+      <div class="kv"><div class="k">Generated</div><div class="v mono">${escapeHtml(delta.generatedAt)}</div></div>
+      <div class="kv"><div class="k">Domain</div><div class="v">${escapeHtml(delta.domain)}</div></div>
+      <div class="kv"><div class="k">Bias</div><div class="v">${escapeHtml(delta.bias)}</div></div>
+      <div class="kv"><div class="k">Overall adjacency risk</div><div class="v"><b>${delta.overallAdjacencyRisk}</b> — ${escapeHtml(delta.summary)}</div></div>
+    </div>
+    <div class="section">
+      <h3><span>Mock prior art pool</span><span class="pill">baseline</span></h3>
+      ${poolHtml}
+    </div>
+    <div class="section">
+      <h3><span>Claim hooks + recommendations</span><span class="pill">${delta.claimHooks.length} hooks</span></h3>
+      ${hooksHtml}
+    </div>
+  `;
+}
+
+function renderTasks(){
+  if(!state.ipTasks.length){
+    setPill(UI.tasksStatusPill, `Tasks: <b>not generated</b>`);
+    UI.tasksView.innerHTML = `<div class="muted">Apply IP delta to generate tasks (e.g., file/publish/hold actions).</div>`;
+    return;
+  }
+  setPill(UI.tasksStatusPill, `Tasks: <b>generated</b>`, "good");
+
+  UI.tasksView.innerHTML = state.ipTasks.map(t => {
+    const cls = `delta ${t.done ? "good" : ""} ${t.severity === "blocker" ? "bad" : ""}`;
+    const sev = t.severity === "blocker" ? `<span class="pill bad">blocker</span>` : `<span class="pill">task</span>`;
+    const done = t.done ? `<span class="pill good">done</span>` : "";
+    return `
+      <div class="${cls}">
+        <div><b>${escapeHtml(t.title)}</b></div>
+        <div class="tiny">${sev} ${done} <span class="pill">evidence: <b class="mono">${escapeHtml(t.producesEvidence?.type || "—")}</b></span></div>
+        <div class="row" style="margin-top:8px;">
+          <button ${t.done ? "disabled" : ""} onclick="markTaskDone('${t.id}')">Mark done</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderEvidence(){
+  UI.txtEvidence.value = JSON.stringify(state.evidence, null, 2);
+}
+
+function renderDecisionPack(){
+  if(!state.dp){
+    UI.dpView.innerHTML = `<div class="muted">Compile to generate Decision Pack v0.</div>`;
+    return;
+  }
+  const dp = state.dp;
+
+  const sauceHtml = `<ul class="list">${dp.secretSauceHypothesisMap.map(h => `<li><b class="mono">${escapeHtml(h.id)}</b> ${escapeHtml(h.claim)}</li>`).join("")}</ul>`;
+
+  const ip = dp.ip.ipDeltaPacket;
+  const ipHtml = ip ? `
+    <div class="section">
+      <h3><span>IP Delta Summary</span><span class="pill ${ip.overallAdjacencyRisk>=0.65?"bad":(ip.overallAdjacencyRisk>=0.50?"warn":"good")}">risk <b>${ip.overallAdjacencyRisk}</b></span></h3>
+      <div class="kv"><div class="k">Summary</div><div class="v">${escapeHtml(ip.summary)}</div></div>
+      <div class="kv"><div class="k">Bias</div><div class="v">${escapeHtml(ip.bias)}</div></div>
+      <div class="kv"><div class="k">Generated</div><div class="v mono">${escapeHtml(ip.generatedAt)}</div></div>
+      <div class="hr"></div>
+      <div class="tiny">Top claim hooks (with actions)</div>
+      <ul class="list">
+        ${ip.claimHooks.map(h => `<li>
+          <b class="mono">${escapeHtml(h.id)}</b> ${escapeHtml(h.claimHook)} 
+          <span class="badge">${escapeHtml(actionLabel(h.recommendedAction))}</span>
+          <span class="badge">risk ${h.adjacencyRisk}</span><br/>
+          <span class="muted">Novelty delta:</span> ${escapeHtml(h.noveltyDelta)}
+        </li>`).join("")}
+      </ul>
+    </div>` : `<div class="muted">No IP delta applied yet.</div>`;
+
+  const tasksDone = state.ipTasks.filter(t=>t.done).length;
+  const ipTasksHtml = dp.ip.tasks?.length ? `
+    <ul class="list">
+      ${dp.ip.tasks.map(t => `<li>${escapeHtml(t.title)} <span class="badge">${t.done ? "done" : "open"}</span></li>`).join("")}
+    </ul>` : `<div class="muted">No IP tasks yet.</div>`;
+
+  const gapsHtml = dp.gaps.length ? `<ul class="list">${dp.gaps.map(g => `<li>${escapeHtml(g.gap)} <span class="badge">${escapeHtml(g.severity)}</span></li>`).join("")}</ul>` : `<div class="muted">No gaps flagged.</div>`;
+
+  UI.dpView.innerHTML = `
+    <div class="section">
+      <h3><span>Meta</span><span class="pill mono">v${dp.meta.version}</span></h3>
+      <div class="kv"><div class="k">One-liner</div><div class="v">${escapeHtml(dp.meta.oneLiner)}</div></div>
+      <div class="kv"><div class="k">ICP</div><div class="v">${escapeHtml(dp.meta.icp)}</div></div>
+      <div class="kv"><div class="k">Compiled</div><div class="v mono">${escapeHtml(dp.meta.compiledAt)}</div></div>
+      <div class="kv"><div class="k">IP tasks</div><div class="v">${tasksDone}/${state.ipTasks.length} done • evidence ${state.evidence.length}</div></div>
+    </div>
+
+    <div class="section">
+      <h3><span>Secret Sauce (inputs)</span><span class="pill">${dp.secretSauceHypothesisMap.length} hooks</span></h3>
+      ${sauceHtml}
+    </div>
+
+    <div class="section">
+      <h3><span>IP Layer</span><span class="pill">${dp.ip.deltaApplied ? "enriched" : "not enriched"}</span></h3>
+      ${ipHtml}
+      <div class="hr"></div>
+      <div class="tiny">IP Tasks (action plan)</div>
+      ${ipTasksHtml}
+    </div>
+
+    <div class="section">
+      <h3><span>Gaps</span><span class="pill">${dp.gaps.length} flagged</span></h3>
+      ${gapsHtml}
+    </div>
+  `;
+}
+
+function renderRubric(){
+  if(!state.rubric){
+    UI.rubricView.innerHTML = `<div class="muted">Run rubrics after IP delta is applied.</div>`;
+    return;
+  }
+  const r = state.rubric;
+  UI.rubricView.innerHTML = `
+    <div class="section">
+      <h3><span>Summary</span><span class="pill ${r.gate==="PASS"?"good":"bad"}">${r.gate}</span></h3>
+      <div class="kv"><div class="k">Total score</div><div class="v"><b>${r.totalScore}</b> / 100</div></div>
+      <div class="kv"><div class="k">Blockers</div><div class="v"><b>${r.blockers}</b></div></div>
+      <div class="kv"><div class="k">Scored at</div><div class="v mono">${escapeHtml(r.scoredAt)}</div></div>
+      <div class="hr"></div>
+      <div class="tiny">Checks</div>
+      <ul class="list">
+        ${r.checks.map(c => `<li><b>${escapeHtml(c.key)}</b>: ${c.score}/${c.max} — <span class="muted">${escapeHtml(c.note)}</span></li>`).join("")}
+      </ul>
+    </div>
+  `;
+}
+
+function renderHistory(){
+  UI.histCount.textContent = String(state.history.length);
+  if(state.history.length === 0){
+    UI.histView.innerHTML = `<div class="muted">No versions yet.</div>`;
+    return;
+  }
+  UI.histView.innerHTML = `
+    <ul class="list">
+      ${state.history.slice().reverse().map(h => `
+        <li>
+          <b class="mono">v${h.version}</b> — <span class="muted mono">${escapeHtml(h.ts)}</span><br/>
+          <span class="muted">${escapeHtml(h.summary)}</span>
+        </li>
+      `).join("")}
+    </ul>
+  `;
+}
+
+function renderAll(){
+  renderTopPills();
+  renderDelta(state.ipDelta);
+  renderTasks();
+  renderEvidence();
+  renderDecisionPack();
+  renderRubric();
+  renderHistory();
+}
+
+// ---------- Actions ----------
+function seedSauce(){
+  UI.txtSauce.value = [
+    "Rubric-gated underwriting pack that links claims → receipts → confidence scores",
+    "Compiler that converts messy founder inputs into a standardized Decision Pack schema",
+    "Change-triggered recompile that updates risk register + evidence plan as diligence deepens"
+  ].join("\n");
+}
+
+function clearSauce(){ UI.txtSauce.value = ""; }
+
+function compile(){
+  if(state.compiled) state.version += 1;
+  state.compiled = true;
+
+  state.dp = compileDecisionPack();
+
+  // reset rubric until rerun
+  state.rubric = null;
+  state.score = null;
+  state.forwardable = "unknown";
+
+  const summary = `hooks:${state.dp.secretSauceHypothesisMap.length} • ipDelta:${state.ipDelta ? "yes" : "no"} • tasks:${state.ipTasks.filter(t=>t.done).length}/${state.ipTasks.length} • evidence:${state.evidence.length}`;
+  state.history.push({ version: state.version, ts: nowIso(), summary });
+
+  log.info("Compiled DP", { version: state.version, summary });
+  renderAll();
+}
+
+function runPI(){
+  const delta = runPatentIntelligence();
+  if(!delta) return;
+  state.ipDelta = delta;
+  log.info("IP Delta Packet ready", { id: delta.id, risk: delta.overallAdjacencyRisk });
+  // after PI run, DP compile can incorporate it (but also allow apply tasks first)
+  renderAll();
+}
+
+function applyDelta(){
+  if(!state.ipDelta){
+    log.warn("Apply delta: run Patent Intelligence first.");
+    return;
+  }
+  state.ipTasks = applyIpDeltaToTasks(state.ipDelta);
+  log.info("IP tasks generated", { count: state.ipTasks.length });
+
+  // Also: produce a lightweight evidence item for the delta itself (receipt)
+  const ev = {
+    id: uid("EV"),
+    type: "ip_delta",
+    title: "Patent Intelligence delta packet (mock)",
+    payload: { linkedTo:["IP.delta_packet"], deltaId: state.ipDelta.id },
+    ts: nowIso()
+  };
+  state.evidence.push(ev);
+  log.info("Evidence added", ev);
+
+  renderAll();
+}
+
+function runRubricsBtn(){
+  if(!state.dp){
+    log.warn("No DP: compile first.");
+    return;
+  }
+  state.rubric = runIpRubrics(state.dp);
+  state.score = state.rubric.totalScore;
+  state.forwardable = (state.rubric.gate === "PASS");
+  log.info("Rubrics complete", { score: state.score, gate: state.rubric.gate });
+  renderAll();
+}
+
+function reset(){
+  log.info("Reset demo");
+  state.version = 0;
+  state.compiled = false;
+  state.dp = null;
+  state.ipDelta = null;
+  state.ipTasks = [];
+  state.evidence = [];
+  state.rubric = null;
+  state.score = null;
+  state.forwardable = "unknown";
+  state.history = [];
+  UI.selDomain.value = "pitch_underwriting";
+  UI.selBias.value = "balanced";
+  seedSauce();
+  renderAll();
+}
+
+// ---------- Wire UI ----------
+function setDomainOptions(){
+  initDomainSelect();
+  UI.selDomain.value = "pitch_underwriting";
+}
+function initDomainSelect(){
+  UI.selDomain.innerHTML = DOMAINS.map(d => `<option value="${d.id}">${escapeHtml(d.label)}</option>`).join("");
+}
+
+UI.btnSeedSauce.addEventListener("click", seedSauce);
+UI.btnClearSauce.addEventListener("click", clearSauce);
+UI.btnCompile.addEventListener("click", compile);
+UI.btnRunPatentIntel.addEventListener("click", runPI);
+UI.btnApplyDelta.addEventListener("click", applyDelta);
+UI.btnRunRubrics.addEventListener("click", runRubricsBtn);
+UI.btnReset.addEventListener("click", reset);
+
+// expose for inline onclick
+window.markTaskDone = markTaskDone;
+
+// boot
+setDomainOptions();
+reset();
+</script>
+</body>
+</html>
